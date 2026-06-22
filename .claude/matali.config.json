@@ -1,0 +1,18 @@
+{
+  "version": "1.0.0",
+  "profile": "production",
+  "testRunner": "node --test",
+  "deployTarget": "github-actions",
+  "ship": {
+    "driveThrough": true,
+    "deploy":   { "type": "ci-dispatch", "workflow": "pages.yml", "ref": "main", "timeoutSec": 300 },
+    "smoke":    { "healthUrl": "https://apurvbazari.github.io/matali-fullpipeline-dogfood/" },
+    "rollback": { "cmd": "git revert --no-edit HEAD && git push" }
+  },
+  "maintain": {
+    "checks": [],
+    "disableBuiltins": [],
+    "loopback": { "autoFixMaxSeverity": "low" }
+  },
+  "createdAt": "2026-06-22T07:43:56Z"
+}

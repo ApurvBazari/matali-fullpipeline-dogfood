@@ -1,0 +1,89 @@
+{
+  "findings": [
+    {
+      "id": "R5-1",
+      "title": "score.js symbol regex /[^A-Za-z0-9\\s]/ deviates from spec.md/plan.md documented /[^A-Za-z0-9]/ (approved V-4 change not propagated to artifacts)",
+      "severity": "medium",
+      "dimension": "requirements",
+      "verified": true,
+      "file": "score.js",
+      "line": 7,
+      "votes": { "total": 2, "couldNotRefute": 2, "refuted": 0 },
+      "note": "Both spec.md:20 and plan.md (U1 interface + band-logic) document the symbol check as /[^A-Za-z0-9]/. The shipped code excludes whitespace (V-4, approved at the P4 gate). Code is correct & tested; the ARTIFACTS are stale. Fix-forward: update spec.md Approach + plan.md U1 to document the whitespace exclusion."
+    },
+    {
+      "id": "R5-2",
+      "title": "BAND_MAP neutral livePhrase='' has no automated guard assertion",
+      "severity": "low",
+      "dimension": "test",
+      "verified": true,
+      "file": "index.html",
+      "line": 203,
+      "note": "AC1/AC8 (no announcement on empty input) is browser-verified only. A one-line source-guard assertion in score.test.js (livePhrase for neutral is empty) would catch a regression with zero added dependency."
+    },
+    {
+      "id": "R5-3",
+      "title": "Plan-text to build naming drift: PRESENTATION->BAND_MAP, sr-status->live, band- class prefix dropped",
+      "severity": "low",
+      "dimension": "requirements",
+      "verified": true,
+      "file": "index.html",
+      "line": 189,
+      "note": "Functional/ARIA semantics identical; the plan named identifiers/ids differently than the build chose. As-built names are self-consistent (CSS + guard tests reference them). Cosmetic traceability only."
+    },
+    {
+      "id": "R5-4",
+      "title": "U4 (render adapter) + U5 (wiring) built as one wave rather than separate steps",
+      "severity": "low",
+      "dimension": "requirements",
+      "verified": true,
+      "file": "index.html",
+      "line": 195,
+      "note": "Same-file, U5-depends-on-U4, no intervening test gate. Flagged at BUILD as an intentional wave-merge (build skill permits grouping). No behavioral impact."
+    },
+    {
+      "id": "R5-5",
+      "title": "package.json {\"type\":\"module\"} added but not in any plan build unit",
+      "severity": "low",
+      "dimension": "requirements",
+      "verified": true,
+      "file": "package.json",
+      "line": 1,
+      "note": "Strictly required for node --test to ESM-import score.js (finding P3-1). Dev-only, not served, adds no dependency; floors hold. Unplanned but necessary; flagged at BUILD."
+    },
+    {
+      "id": "R5-6",
+      "title": "render()/onInput() DOM logic has no unit test (browser-verified only)",
+      "severity": "low",
+      "dimension": "test",
+      "verified": true,
+      "file": "index.html",
+      "line": 227,
+      "note": "Structurally forced by the no-build/no-dependencies floor (unit-testing inline <script type=module> DOM logic needs JSDOM, which is banned). Authoritatively covered by the P4 browser drive. Acknowledged, justified gap."
+    },
+    {
+      "id": "R5-7",
+      "title": "scorePassword returns satisfiedCount, unused by the UI (YAGNI signal)",
+      "severity": "low",
+      "dimension": "simplify",
+      "verified": true,
+      "file": "score.js",
+      "line": 10,
+      "note": "satisfiedCount is part of the spec'd return interface ({band, rules, satisfiedCount}) and has a unit assertion, but no render/wiring consumer. Keeping it is spec-faithful; removing it would shrink the surface. Low — accept or trim."
+    },
+    {
+      "id": "R5-8",
+      "title": "autocomplete=\"new-password\" on the input is not in the spec",
+      "severity": "low",
+      "dimension": "requirements",
+      "verified": true,
+      "file": "index.html",
+      "line": 160,
+      "note": "Touches the spec's explicit non-goal (browser autofill), but is a harmless/standard attribute for a password field. Accept or remove."
+    }
+  ],
+  "recommendedEscalation": "minor",
+  "degraded": false,
+  "emptyScope": false,
+  "summary": "No correctness/security/silent-failure/risk findings (lens:correctness + risk-classify both clean). 11/11 acceptance criteria met, all 8 floors hold (spec-adherence). 8 low/medium requirements+test+simplify observations; only R5-1 (artifact-vs-code drift on the symbol regex) is genuinely worth acting on, plus optional R5-2. Two finder claims refuted/dropped: debounce-not-in-spec (plan-authorized) and extra-tests-beyond-AC11 (positive coverage). Verify/dedup/rank orchestrator-adjudicated against spec.md/plan.md source (factual traceability findings, no contestable bug claims)."
+}

@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Password Strength Meter</title>
+  <style>
+    :root {
+      --bg: #f5f6f8;
+      --fg: #1c1f24;
+      --muted: #5a616b;
+      --track: #d7dbe0;
+      --weak: #c0392b;
+      --fair: #c08a1e;
+      --strong: #2d7a34;
+      --neutral: #9aa1ab;
+      --done: #2d7a34;
+      --pending: #5a616b; /* >=4.5:1 on white (WCAG AA); was #8a909a (3.21:1) */
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      margin: 0;
+      padding: 2rem 1rem;
+      line-height: 1.5;
+    }
+
+    main {
+      max-width: 30rem;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 1.5rem;
+      border-radius: 0.75rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    }
+
+    h1 {
+      font-size: 1.35rem;
+      margin: 0 0 1rem;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      margin-bottom: 1rem;
+    }
+
+    label {
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    input[type="password"] {
+      font: inherit;
+      padding: 0.55rem 0.65rem;
+      border: 1px solid var(--track);
+      border-radius: 0.4rem;
+      background: #fff;
+      color: var(--fg);
+    }
+
+    input[type="password"]:focus {
+      outline: 2px solid #3b5bdb;
+      outline-offset: 1px;
+      border-color: #3b5bdb;
+    }
+
+    #strength-label {
+      font-weight: 700;
+      font-size: 0.95rem;
+      min-height: 1.4em;
+      margin-bottom: 0.4rem;
+    }
+
+    .bar {
+      width: 100%;
+      height: 0.6rem;
+      background: var(--track);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: 1.25rem;
+    }
+
+    #bar-fill {
+      height: 100%;
+      width: 0%;
+      background: var(--neutral);
+      border-radius: 999px;
+      transition: width 0.2s ease, background-color 0.2s ease;
+    }
+
+    #bar-fill.neutral { background: var(--neutral); }
+    #bar-fill.weak    { background: var(--weak); }
+    #bar-fill.fair    { background: var(--fair); }
+    #bar-fill.strong  { background: var(--strong); }
+
+    #checklist {
+      list-style: none;
+      margin: 0 0 1.25rem;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+
+    #checklist li {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.9rem;
+      color: var(--pending);
+    }
+
+    #checklist li.satisfied {
+      color: var(--done);
+      font-weight: 600;
+    }
+
+    #checklist .marker {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 1.15rem;
+      height: 1.15rem;
+      flex: 0 0 auto;
+      border-radius: 50%;
+      border: 1.5px solid currentColor;
+      font-size: 0.8rem;
+      line-height: 1;
+    }
+
+    .live-region {
+      min-height: 1.2em;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    /* Visually hidden but available to screen readers (accessible state text). */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    .disclaimer {
+      font-size: 0.8rem;
+      color: var(--muted);
+      border-top: 1px solid var(--track);
+      padding-top: 0.9rem;
+      margin: 1rem 0 0;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Password Strength Meter</h1>
+
+    <div class="field">
+      <label for="pw">Password</label>
+      <input type="password" id="pw" autocomplete="new-password">
+    </div>
+
+    <div id="strength-label" aria-hidden="true"></div>
+
+    <div class="bar">
+      <div id="bar-fill" class="neutral"></div>
+    </div>
+
+    <ul id="checklist">
+      <li id="rule-length"><span class="marker" aria-hidden="true">○</span><span class="rule-text">At least 8 characters</span><span class="sr-only rule-status">not satisfied</span></li>
+      <li id="rule-lower"><span class="marker" aria-hidden="true">○</span><span class="rule-text">A lowercase letter</span><span class="sr-only rule-status">not satisfied</span></li>
+      <li id="rule-upper"><span class="marker" aria-hidden="true">○</span><span class="rule-text">An uppercase letter</span><span class="sr-only rule-status">not satisfied</span></li>
+      <li id="rule-digit"><span class="marker" aria-hidden="true">○</span><span class="rule-text">A number</span><span class="sr-only rule-status">not satisfied</span></li>
+      <li id="rule-symbol"><span class="marker" aria-hidden="true">○</span><span class="rule-text">A symbol</span><span class="sr-only rule-status">not satisfied</span></li>
+    </ul>
+
+    <div id="live" class="live-region" role="status" aria-live="polite" aria-atomic="true"></div>
+
+    <p class="disclaimer">This meter checks composition only &mdash; the mix of character types and the length of what you type. It does not measure entropy, breach exposure, or how easily a password could be guessed. Length is the strongest signal it can see.</p>
+  </main>
+
+  <script type="module">
+    import { scorePassword } from './score.js';
+
+    // ---------------------------------------------------------------------------
+    // U4 — Declarative band -> presentation lookup table.
+    // Retuning a band is a one-line edit here; the rest of render is untouched.
+    // ---------------------------------------------------------------------------
+    const BAND_MAP = {
+      neutral: { labelText: '',        barClass: 'neutral', widthPct: 0,   livePhrase: '' },
+      weak:    { labelText: 'Weak',    barClass: 'weak',    widthPct: 33,  livePhrase: 'Password strength: Weak' },
+      fair:    { labelText: 'Fair',    barClass: 'fair',    widthPct: 66,  livePhrase: 'Password strength: Fair' },
+      strong:  { labelText: 'Strong',  barClass: 'strong',  widthPct: 100, livePhrase: 'Password strength: Strong' },
+    };
+
+    // Rule key -> element id mapping (keeps the lookup table band-agnostic).
+    const RULE_IDS = {
+      length: 'rule-length',
+      lower:  'rule-lower',
+      upper:  'rule-upper',
+      digit:  'rule-digit',
+      symbol: 'rule-symbol',
+    };
+
+    const strengthLabel = document.getElementById('strength-label');
+    const barFill       = document.getElementById('bar-fill');
+    const liveRegion    = document.getElementById('live');
+    const pwInput       = document.getElementById('pw');
+
+    // ---------------------------------------------------------------------------
+    // U4 — Pure render(result): updates label, bar, and checklist.
+    // MUST NOT read the input value, write to #live, or perform any I/O.
+    // ---------------------------------------------------------------------------
+    function render(result) {
+      const { band, rules } = result;
+      const pres = BAND_MAP[band];
+
+      // Text label (primary band indicator — color is only reinforcement).
+      strengthLabel.textContent = pres.labelText;
+
+      // Bar fill: swap band class + set width.
+      barFill.className = '';           // clear previous band class
+      barFill.classList.add(pres.barClass);
+      barFill.style.width = pres.widthPct + '%';
+
+      // Checklist: per rule, toggle .satisfied (color), swap the marker glyph
+      // (non-color shape cue), and set screen-reader status text. No aria-checked:
+      // <li> has no checkbox role, so aria-checked there is invalid ARIA.
+      for (const [key, id] of Object.entries(RULE_IDS)) {
+        const el = document.getElementById(id);
+        const satisfied = Boolean(rules[key]);
+        el.classList.toggle('satisfied', satisfied);
+        const marker = el.querySelector('.marker');
+        if (marker) marker.textContent = satisfied ? '✓' : '○'; // ✓ / ○
+        const status = el.querySelector('.rule-status');
+        if (status) status.textContent = satisfied ? 'satisfied' : 'not satisfied';
+      }
+    }
+
+    // ---------------------------------------------------------------------------
+    // U5 — Wiring: input listener + 200 ms trailing debounce for live region only.
+    // ---------------------------------------------------------------------------
+    let debounceTimer = null;
+
+    function onInput() {
+      const value = pwInput.value;
+      const result = scorePassword(value);
+
+      // Visual update is synchronous — no debounce.
+      render(result);
+
+      // Live region update is debounced to avoid screen-reader flooding.
+      clearTimeout(debounceTimer);
+
+      if (value.length === 0) {
+        // Empty input: clear live region immediately, cancel any pending announcement.
+        liveRegion.textContent = '';
+      } else {
+        debounceTimer = setTimeout(() => {
+          liveRegion.textContent = BAND_MAP[result.band].livePhrase;
+        }, 200);
+      }
+    }
+
+    pwInput.addEventListener('input', onInput);
+
+    // Run once on load to reflect the initial empty state (Neutral).
+    onInput();
+  </script>
+</body>
+</html>

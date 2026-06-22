@@ -1,0 +1,687 @@
+<!DOCTYPE html><html lang="en" data-theme="dark"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>password-strength-meter — matali run dossier</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap');
+:root{
+  --bg-deep:#08090c; --bg-card:#0f1117; --bg-card-hover:#151821; --bg-elevated:#1a1d28; --bg-inset:#060709;
+  --border:#1e2230; --border-active:#2d3348; --border-strong:#3a4159;
+  --tp:#e8eaf0; --ts:#7d8399; --tm:#4a5068; --tf:#2e3349;
+  --blue:#3b82f6; --green:#22c55e; --amber:#f59e0b; --rose:#f43f5e; --purple:#a78bfa;
+  --accent:#22d3ee; --accent-glow:rgba(34,211,238,.16); --accent-soft:rgba(34,211,238,.08);
+  --blue-soft:rgba(59,130,246,.1); --green-soft:rgba(34,197,94,.1); --amber-soft:rgba(245,158,11,.1); --rose-soft:rgba(244,63,94,.1); --purple-soft:rgba(167,139,250,.1);
+  --mono:'JetBrains Mono',monospace; --serif:'Instrument Serif',serif; --sans:'DM Sans',sans-serif;
+  --ease:cubic-bezier(.16,1,.3,1);
+}
+html[data-theme="light"]{
+  --bg-deep:#faf8f4; --bg-card:#fff; --bg-card-hover:#f5f1ea; --bg-elevated:#fff; --bg-inset:#f5f1ea;
+  --border:#e5dfd6; --border-active:#d8cfc1; --border-strong:#c9c0b3;
+  --tp:#2a2520; --ts:#6b6157; --tm:#9e9486; --tf:#c9c0b3;
+  --blue:#2d5fa0; --green:#2d7a3a; --amber:#b87333; --rose:#b83a3a; --purple:#7a3b8f;
+  --accent:#c05e2b; --accent-glow:rgba(192,94,43,.16); --accent-soft:rgba(192,94,43,.09);
+  --blue-soft:rgba(45,95,160,.1); --green-soft:rgba(45,122,58,.1); --amber-soft:rgba(184,115,51,.1); --rose-soft:rgba(184,58,58,.1); --purple-soft:rgba(122,59,143,.1);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg-deep);color:var(--tp);font-family:var(--sans);line-height:1.65;-webkit-font-smoothing:antialiased;overflow-x:hidden;transition:background .3s,color .3s;}
+body::after{content:'';position:fixed;inset:0;z-index:9999;pointer-events:none;opacity:.025;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
+/* nav */
+nav{position:fixed;top:0;left:0;right:0;height:54px;z-index:100;backdrop-filter:blur(20px) saturate(180%);background:color-mix(in srgb,var(--bg-deep) 82%,transparent);border-bottom:1px solid var(--border);}
+.nav-in{max-width:1180px;margin:0 auto;height:100%;display:flex;align-items:center;justify-content:space-between;padding:0 1.6rem;}
+.logo{font-family:var(--mono);font-size:.82rem;font-weight:600;letter-spacing:.02em;}
+.logo span{color:var(--accent);}
+.nav-links{display:flex;gap:.3rem;font-family:var(--mono);font-size:.68rem;}
+.nav-links a{color:var(--ts);text-decoration:none;padding:.3rem .55rem;border-radius:6px;transition:.2s;}
+.nav-links a:hover,.nav-links a.on{color:var(--tp);background:var(--accent-soft);}
+.nav-meta{display:flex;align-items:center;gap:.45rem;font-family:var(--mono);font-size:.62rem;color:var(--tm);text-transform:uppercase;letter-spacing:.12em;}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2.5s infinite;}
+.theme-btn{cursor:pointer;font-family:var(--mono);font-size:.62rem;color:var(--ts);border:1px solid var(--border);padding:.28rem .6rem;border-radius:6px;background:none;}
+.progress{position:fixed;top:54px;left:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--blue));z-index:101;width:0;box-shadow:0 0 8px var(--accent-glow);}
+main{max-width:1180px;margin:0 auto;padding:0 1.6rem;padding-top:78px;counter-reset:sec;}
+.eyebrow{font-family:var(--mono);font-size:.68rem;color:var(--accent);text-transform:uppercase;letter-spacing:.18em;display:inline-flex;align-items:center;gap:.6rem;margin-bottom:.8rem;}
+.eyebrow::before{content:'';width:26px;height:1px;background:var(--accent);}
+h1{font-family:var(--serif);font-size:clamp(2.4rem,6vw,4rem);font-weight:400;line-height:1.04;letter-spacing:-.025em;margin:.2rem 0;max-width:880px;}
+h1 em,h2 em{font-style:italic;color:var(--accent);}
+h2{font-family:var(--serif);font-size:clamp(1.7rem,3.5vw,2.4rem);font-weight:400;line-height:1.15;margin:.2rem 0 .3rem;}
+.lede{color:var(--ts);font-size:1.08rem;line-height:1.7;max-width:720px;margin:.6rem 0 0;}
+p{color:var(--ts);font-size:.92rem;line-height:1.7;max-width:720px;}
+p code,li code{font-family:var(--mono);font-size:.8rem;background:var(--accent-soft);color:var(--accent);padding:1px 5px;border-radius:4px;}
+section{padding:4rem 0 2rem;scroll-margin-top:70px;opacity:0;transform:translateY(24px);transition:opacity .7s var(--ease),transform .7s var(--ease);}
+section.vis{opacity:1;transform:none;}
+.sec-label{counter-increment:sec;font-family:var(--mono);font-size:.65rem;color:var(--tm);text-transform:uppercase;letter-spacing:.15em;margin-bottom:.5rem;}
+.sec-label::before{content:counter(sec,decimal-leading-zero) " \2014 ";}
+/* hero stats */
+.hstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:1px;background:var(--border);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-top:1.8rem;}
+.hstat{background:var(--bg-card);padding:1.1rem 1.2rem;}
+.hstat .v{font-family:var(--serif);font-size:1.9rem;color:var(--tp);line-height:1;}
+.hstat .v em{font-style:italic;color:var(--accent);}
+.hstat .l{font-family:var(--mono);font-size:.6rem;color:var(--tm);text-transform:uppercase;letter-spacing:.1em;margin-top:.4rem;}
+/* detail panel */
+.panel{position:fixed;top:0;right:0;width:300px;height:100vh;background:var(--bg-card);border-left:1px solid var(--border-active);padding:24px 20px;overflow:auto;transform:translateX(100%);transition:transform .25s var(--ease);box-shadow:-20px 0 50px rgba(0,0,0,.3);z-index:200;}
+.panel.open{transform:none;}
+.panel .x{position:absolute;top:14px;right:16px;color:var(--tm);cursor:pointer;font-size:18px;}
+.panel .pk{font-family:var(--mono);font-size:.6rem;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);}
+.panel h3{font-family:var(--serif);font-weight:400;font-size:1.4rem;margin:.2rem 0 .6rem;}
+.panel .pb{font-size:.86rem;color:var(--ts);line-height:1.6;}
+.panel code{font-family:var(--mono);font-size:.72rem;background:var(--accent-soft);color:var(--accent);padding:1px 5px;border-radius:4px;}
+.panel .sf-h{font-family:var(--serif);font-weight:400;font-size:1.4rem;margin:.2rem 0 .5rem;}
+.sf-summary{font-size:.86rem;color:var(--ts);line-height:1.6;margin:0 0 .8rem;}
+.sf-where{display:flex;flex-wrap:wrap;gap:.35rem;margin:.2rem 0 .8rem;}
+.sf-loc{font-family:var(--mono);font-size:.7rem;background:var(--accent-soft);color:var(--accent);padding:1px 6px;border-radius:4px;}
+.sf-code{margin:.2rem 0 .8rem;border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+.sf-code figcaption{font-family:var(--mono);font-size:.6rem;color:var(--tm);background:var(--bg-inset);padding:.3rem .6rem;}
+.sf-code pre{margin:0;padding:.6rem;overflow:auto;font-family:var(--mono);font-size:.72rem;color:var(--tp);}
+.sf-points{margin:.2rem 0 .8rem;padding-left:1.1rem;}
+.sf-points li{font-size:.84rem;color:var(--ts);margin:.25rem 0;}
+.sf-related{display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.6rem;}
+.sf-related .chip{cursor:pointer;border:none;}
+dialog.sheet{max-width:min(900px,92vw);width:100%;max-height:86vh;border:1px solid var(--border-active);border-radius:14px;background:var(--bg-card);color:var(--tp);padding:0;overflow:hidden;box-shadow:0 30px 80px -20px rgba(0,0,0,.5);}
+dialog.sheet::backdrop{background:color-mix(in srgb,var(--bg-deep) 70%,transparent);backdrop-filter:blur(6px) saturate(140%);}
+dialog.sheet>.x{position:absolute;top:12px;right:14px;color:var(--tm);cursor:pointer;font-size:18px;background:none;border:none;z-index:1;}
+dialog.sheet .sf-body{padding:26px 24px;overflow:auto;flex:1;min-height:0;}
+dialog.sheet .sf-kicker{font-family:var(--mono);font-size:.6rem;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);}
+dialog.sheet[open]{display:flex;flex-direction:column;animation:sheetIn .26s var(--ease);}
+@keyframes sheetIn{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){dialog.sheet[open]{animation:none;}}
+dialog.pane-dialog{max-width:min(360px,92vw);margin-right:0;margin-left:auto;height:100vh;max-height:100vh;border-radius:0;}
+dialog.sheet .sf-h{font-family:var(--serif);font-weight:400;margin:.2rem 0 .5rem;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@media(max-width:780px){.nav-links{display:none}}
+.chip{display:inline-flex;align-items:center;gap:.35rem;font-family:var(--mono);font-size:.6rem;font-weight:500;text-transform:uppercase;letter-spacing:.06em;padding:.2rem .55rem;border-radius:20px;border:1px solid var(--border);background:var(--bg-card);color:var(--ts);}
+.chip::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor;}
+.chip.ok{color:var(--green);background:var(--green-soft);border-color:color-mix(in srgb,var(--green) 30%,transparent);}
+.chip.info{color:var(--blue);background:var(--blue-soft);border-color:color-mix(in srgb,var(--blue) 30%,transparent);}
+.chip.warn{color:var(--amber);background:var(--amber-soft);border-color:color-mix(in srgb,var(--amber) 30%,transparent);}
+.chip.danger{color:var(--rose);background:var(--rose-soft);border-color:color-mix(in srgb,var(--rose) 30%,transparent);}
+.chip.neutral{color:var(--ts);background:var(--bg-elevated);border-color:var(--border);}
+
+/* ---- COMPONENT CSS ---- */
+/* prose */
+.callout{background:var(--accent-soft);border-left:3px solid var(--accent);border-radius:0 10px 10px 0;padding:.9rem 1.2rem;margin:1.1rem 0;}
+.callout h4{font-family:var(--serif);font-weight:400;color:var(--accent);margin:0 0 .3rem;font-size:1.1rem;}
+.callout p{margin:0;font-size:.86rem;color:var(--ts);}
+.callout code{font-family:var(--mono);font-size:.78rem;background:var(--bg-card);color:var(--accent);padding:1px 5px;border-radius:4px;}
+.edge-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:.7rem;margin-top:1rem;}
+.edge{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:.85rem 1rem;}
+.edge .n{font-family:var(--mono);font-size:.62rem;color:var(--accent);}
+.edge .t{font-weight:600;margin:.2rem 0;font-size:.88rem;color:var(--tp);}
+.edge p{font-size:.78rem;margin:0;color:var(--ts);}
+.oq{display:flex;gap:.8rem;align-items:flex-start;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:.8rem 1.1rem;margin-bottom:.6rem;}
+.oq .q{font-family:var(--serif);font-style:italic;color:var(--accent);font-size:1.3rem;line-height:1;}
+.oq div{font-size:.86rem;color:var(--ts);}
+.legend{display:flex;gap:.6rem;flex-wrap:wrap;margin:1rem 0;}
+.lg{font-family:var(--mono);font-size:.6rem;color:var(--tp);padding:.5rem .7rem;border-radius:8px;border:1px solid var(--border);display:flex;align-items:center;gap:.5rem;background:var(--bg-card);}
+.lg i{width:14px;height:14px;border-radius:4px;display:inline-block;}
+.anno{margin:1.2rem 0;border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.anno figcaption{font-family:var(--mono);font-size:.62rem;color:var(--tm);background:var(--bg-inset);padding:.4rem .75rem;}
+.anno pre{margin:0;padding:.8rem .9rem;overflow:auto;font-family:var(--mono);font-size:.74rem;line-height:1.55;color:var(--tp);background:var(--bg-card);}
+/* flow diagram */
+.flow{display:flex;align-items:center;flex-wrap:wrap;gap:.4rem;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1.5rem;margin:1.2rem 0;}
+.fnode{flex:1;min-width:110px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:10px;padding:.8rem .9rem;font-family:var(--mono);font-size:.7rem;cursor:pointer;transition:all .3s var(--ease);}
+.fnode:hover{border-color:var(--accent);box-shadow:0 0 20px var(--accent-glow);transform:scale(1.03);}
+.fnode .nl{font-size:.55rem;color:var(--tm);text-transform:uppercase;letter-spacing:.1em;}
+.fnode.accent{border-color:color-mix(in srgb,var(--accent) 40%,transparent);background:linear-gradient(135deg,var(--bg-elevated),var(--accent-soft));}
+.farr{color:var(--border-strong);font-size:1.1rem;}
+/* concept / mind map */
+.mindmap{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1.5rem;margin:1.2rem 0;overflow-x:auto;}
+.mindmap svg{display:block;min-width:560px;max-width:100%;height:auto;}
+.mm-edge line{stroke:var(--border-strong);stroke-width:1.5;}
+.mm-node rect{fill:var(--bg-elevated);stroke:var(--border);transition:all .3s var(--ease);cursor:pointer;}
+.mm-node:hover rect{stroke:var(--accent);}
+.mm-node.center circle{fill:color-mix(in srgb,var(--bg-elevated),var(--accent-soft));stroke:var(--accent);}
+.mm-node text{font-family:var(--mono);font-size:11px;fill:var(--tp);}
+.mm-node.center text{fill:var(--accent);}
+/* dependency graph */
+.depgraph{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1.5rem;margin:1.2rem 0;overflow-x:auto;}
+.depgraph svg{display:block;min-width:560px;max-width:100%;height:auto;}
+.dg-edge line{stroke:var(--border-strong);stroke-width:1.5;transition:stroke .3s var(--ease);}
+.depgraph:hover .dg-edge line{stroke:var(--accent);}
+.dg-node rect{fill:var(--bg-elevated);stroke:var(--border);transition:all .3s var(--ease);cursor:pointer;}
+.dg-node:hover rect{stroke:var(--accent);}
+.dg-node.leaf rect{fill:color-mix(in srgb,var(--bg-elevated),var(--accent-soft));stroke:color-mix(in srgb,var(--accent) 30%,transparent);}
+.dg-node text{font-family:var(--mono);font-size:11px;fill:var(--tp);}
+.dg-node .dgsub{font-size:8px;fill:var(--tm);}
+/* comparison table */
+.compare-table{width:100%;border-collapse:separate;border-spacing:0;font-size:.82rem;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin:1.2rem 0;}
+.compare-table th{font-family:var(--mono);font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:var(--tm);padding:.85rem 1.25rem;text-align:left;background:var(--bg-elevated);border-bottom:1px solid var(--border);font-weight:500;}
+.compare-table td{padding:.75rem 1.25rem;border-bottom:1px solid var(--border);color:var(--ts);vertical-align:top;}
+.compare-table tr:last-child td{border-bottom:none;}
+.compare-table tr:hover td{background:var(--bg-card-hover);}
+.compare-table .label-cell{font-weight:500;color:var(--tp);font-size:.82rem;}
+.badge-yes{display:inline-flex;align-items:center;gap:.3rem;font-family:var(--mono);font-size:.68rem;color:var(--green);background:var(--green-soft);padding:.2rem .55rem;border-radius:4px;}
+.badge-no{display:inline-flex;align-items:center;gap:.3rem;font-family:var(--mono);font-size:.68rem;color:var(--tm);background:var(--bg-inset);padding:.2rem .55rem;border-radius:4px;}
+.badge-upgraded{display:inline-flex;align-items:center;gap:.3rem;font-family:var(--mono);font-size:.68rem;color:var(--accent);background:var(--accent-soft);padding:.2rem .55rem;border-radius:4px;}
+/* accordion checklist */
+.acc{border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-top:1rem;}
+.acc details{border-bottom:1px solid var(--border);}
+.acc details:last-child{border-bottom:none;}
+.acc summary{list-style:none;padding:.85rem 1.1rem;cursor:pointer;display:flex;align-items:center;gap:.7rem;background:var(--bg-card);font-size:.9rem;}
+.acc summary::-webkit-details-marker{display:none;}
+.acc summary .badge{width:18px;height:18px;border-radius:5px;font-size:.7rem;display:flex;align-items:center;justify-content:center;font-family:var(--mono);}
+.acc summary .chev{margin-left:auto;color:var(--tm);transition:transform .2s;}
+.acc details[open] summary .chev{transform:rotate(90deg);}
+.acc .ac-body{padding:.4rem 1.1rem 1rem 2.7rem;font-size:.84rem;color:var(--ts);background:var(--bg-card);}
+.acc .ref{font-family:var(--mono);font-size:.66rem;color:var(--accent);margin-top:.4rem;}
+/* bespoke - phase track (cumulative run dossier spine) */
+.phasetrack{display:flex;flex-wrap:wrap;gap:.5rem;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1.2rem;margin:1.2rem 0;}
+.phase{flex:1;min-width:120px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:10px;padding:.85rem .9rem;transition:all .3s var(--ease);}
+.phase .pn{font-family:var(--mono);font-size:.55rem;color:var(--tm);text-transform:uppercase;letter-spacing:.12em;margin-bottom:.3rem;}
+.phase .pt{font-family:var(--mono);font-size:.78rem;color:var(--tp);font-weight:500;}
+.phase .ps{font-family:var(--mono);font-size:.56rem;text-transform:uppercase;letter-spacing:.08em;margin-top:.5rem;}
+.phase.done{border-color:var(--accent);background:linear-gradient(135deg,var(--bg-elevated),var(--accent-soft));box-shadow:0 0 0 1px var(--accent),0 8px 32px -8px var(--accent-glow);cursor:pointer;}
+.phase.done .ps{color:var(--accent);}
+.phase.done:hover{transform:translateY(-2px);}
+.phase.pending{opacity:.6;}
+.phase.pending .ps{color:var(--tm);}
+/* bespoke - floors band (the binding constraints) */
+.floors{display:flex;flex-direction:column;gap:.55rem;margin:1.2rem 0;}
+.floor{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:.9rem;background:var(--bg-card);border:1px solid var(--border);border-left:3px solid var(--rose);border-radius:10px;padding:.9rem 1.1rem;cursor:pointer;transition:all .3s var(--ease);text-align:left;width:100%;font-family:inherit;}
+.floor:hover{border-color:var(--accent);border-left-color:var(--accent);box-shadow:0 0 0 1px var(--accent),0 8px 32px -8px var(--accent-glow);transform:translateX(3px);}
+.floor .fid{font-family:var(--mono);font-size:.6rem;color:var(--rose);text-transform:uppercase;letter-spacing:.06em;background:var(--rose-soft);padding:.25rem .55rem;border-radius:20px;white-space:nowrap;}
+.floor .frule{font-size:.84rem;color:var(--tp);line-height:1.5;}
+.floor .farrow{color:var(--tm);font-family:var(--mono);font-size:.9rem;}
+.floor:hover .farrow{color:var(--accent);}
+</style></head>
+<body>
+  <nav><div class="nav-in">
+    <div class="logo">&#9670; matali<span>&middot;run</span></div>
+    <div class="nav-links"><a href="#top" class="on">Top</a><a href="#pipeline">Pipeline</a><a href="#intent">Intent</a><a href="#floors">R0 Floors</a><a href="#decision">Decision</a><a href="#priorart">Prior art</a><a href="#risks">R0 Risks</a><a href="#questions">Open Qs</a><a href="#spec-intent">Spec</a><a href="#spec-approach">Approach</a><a href="#spec-bands">Bands</a><a href="#spec-acceptance">Acceptance</a><a href="#spec-boundaries">Boundaries</a><a href="#spec-floors">8 Floors</a><a href="#plan-dag">Build DAG</a><a href="#plan-map">Coverage</a><a href="#plan-risks">Rollback</a></div>
+    <div style="display:flex;align-items:center;gap:.8rem">
+      <div class="nav-meta"><span class="dot"></span> P2 PLAN &middot; PASSWORD-STRENGTH-METER</div>
+      <button class="theme-btn" onclick="tgl()">&#9685; THEME</button></div>
+  </div></nav>
+  <div class="progress" id="prog"></div>
+  <main>
+    <section id="top" class="vis" style="padding-top:2.4rem">
+      <div class="eyebrow">matali run dossier &middot; phases R0 &middot; P1 &middot; P2</div>
+      <h1>password-strength-meter &mdash; the <em>cumulative</em> run dossier</h1>
+      <p class="lede">One feature moving through the matali pipeline. <em>R0 RESEARCH</em> scoped the problem and chose an additive composition-rule scorer over entropy estimation. <em>P1 SPEC</em> pinned that into a clean layered design &mdash; a pure <code>scorePassword()</code> module, an importing <code>index.html</code>, and a <code>node --test</code> suite &mdash; with a four-band mapping and 11 acceptance criteria. <em>P2 PLAN</em> then decomposed it into a 7-unit build DAG that covers every criterion. Three phases complete; P3 BUILD through P6 SHIP remain pending.</p>
+      <div class="hstats">
+        <div class="hstat"><div class="v"><em>P2</em></div><div class="l">Current phase</div></div>
+        <div class="hstat"><div class="v"><em>8</em></div><div class="l">Binding floors</div></div>
+        <div class="hstat"><div class="v">4</div><div class="l">Strength bands</div></div>
+        <div class="hstat"><div class="v">11</div><div class="l">Acceptance criteria</div></div>
+        <div class="hstat"><div class="v">7</div><div class="l">Build units</div></div>
+        <div class="hstat"><div class="v">0</div><div class="l">Runtime deps</div></div>
+      </div>
+    </section>
+
+    <section id="pipeline">
+      <div class="sec-label">run spine</div>
+      <h2>One feature, <em>seven</em> phases</h2>
+      <p class="lede">This is the cumulative run dossier for the feature. R0 RESEARCH, P1 SPEC, and P2 PLAN are complete and current; the later phases (P3 BUILD through P6 SHIP) are pending, to be appended on subsequent passes. The floors landed at R0 and formalized in the spec bind every phase downstream &mdash; nothing later may disarm them. Click a completed phase for its summary.</p>
+      <div class="phasetrack">
+        <div class="phase done" data-id="phase-r0" onclick="openSurface('phase-r0')"><div class="pn">R0</div><div class="pt">Research</div><div class="ps">&check; complete</div></div>
+        <div class="phase done" data-id="phase-p1" onclick="openSurface('phase-p1')"><div class="pn">P1</div><div class="pt">Spec</div><div class="ps">&check; complete</div></div>
+        <div class="phase done" data-id="phase-p2" onclick="openSurface('phase-p2')"><div class="pn">P2</div><div class="pt">Plan</div><div class="ps">&check; complete</div></div>
+        <div class="phase pending"><div class="pn">P3</div><div class="pt">Build</div><div class="ps">pending</div></div>
+        <div class="phase pending"><div class="pn">P4</div><div class="pt">Verify</div><div class="ps">pending</div></div>
+        <div class="phase pending"><div class="pn">P5</div><div class="pt">Review</div><div class="ps">pending</div></div>
+        <div class="phase pending"><div class="pn">P6</div><div class="pt">Ship</div><div class="ps">pending</div></div>
+      </div>
+    </section>
+
+    <section id="intent">
+      <div class="sec-label">R0 &middot; intent</div>
+      <h2>What is being <em>built</em></h2>
+      <p class="lede">A password-strength meter as a single static web page &mdash; vanilla HTML/CSS/JS, no build step, no dependencies &mdash; that live-scores a typed password as weak / fair / strong.</p>
+      <p>The page renders a strength bar, a color-coded label, and a checklist of satisfied rules: length &ge; 8, lowercase, uppercase, digit, symbol. It must be accessible &mdash; a labelled input plus an ARIA live region for the strength text &mdash; and it deploys as a static page (GitHub Pages, served under a <code>/repo-name/</code> subpath).</p>
+      <div class="callout"><h4>The framing that threads the needle</h4><p>NIST SP 800-63B discourages composition rules as a mandatory gate but endorses a strength meter as user guidance. So the five-rule checklist is presented as &ldquo;here&rsquo;s what you&rsquo;ve satisfied&rdquo; &mdash; a composition guide &mdash; not as a security requirement.</p></div>
+    </section>
+
+    <section id="floors">
+      <div class="sec-label">R0 &middot; constraints &amp; floors</div>
+      <h2>Five <em>binding</em> floors at R0</h2>
+      <p class="lede">These are the non-disarmable constraints carried out of R0. Every downstream phase inherits them; a build that violates any floor fails the gate. P1 SPEC later formalized the set to eight (see <a href="#spec-floors">the 8-floor block</a>). Click a floor for its rule text and source.</p>
+      <div class="floors">
+        <button class="floor" onclick="openSurface('floor-network')"><span class="fid">no-network-calls</span><span class="frule">The password value must never be transmitted, logged, or stored &mdash; all scoring is client-side only.</span><span class="farrow">&rarr;</span></button>
+        <button class="floor" onclick="openSurface('floor-arialive')"><span class="fid">aria-live-no-password-value</span><span class="frule">The live region carries only the strength label &mdash; never the password value itself.</span><span class="farrow">&rarr;</span></button>
+        <button class="floor" onclick="openSurface('floor-label')"><span class="fid">label-explicit-association</span><span class="frule">The input needs an explicit <code>&lt;label for&gt;</code> association &mdash; placeholder text is not a substitute.</span><span class="farrow">&rarr;</span></button>
+        <button class="floor" onclick="openSurface('floor-colortext')"><span class="fid">color-plus-text</span><span class="frule">Strength indication must pair a text label with color &mdash; color alone fails WCAG 1.4.1.</span><span class="farrow">&rarr;</span></button>
+        <button class="floor" onclick="openSurface('floor-nobuild')"><span class="fid">no-build-no-dependencies</span><span class="frule">Vanilla HTML/CSS/JS only &mdash; no libraries, CDN scripts, bundlers, or build steps.</span><span class="farrow">&rarr;</span></button>
+      </div>
+      <div class="callout"><h4>Why these are floors, not preferences</h4><p>Each traces to an external authority &mdash; WCAG success criteria, the W3C WAI password example, NIST 800-63B, or the static-deploy reality of GitHub Pages. They are the hard requirements stable across every research axis, so they bind rather than negotiate.</p></div>
+    </section>
+
+    <section id="decision">
+      <div class="sec-label">R0 &middot; key decision</div>
+      <h2>Composition rules <em>over</em> entropy estimation</h2>
+      <p class="lede">The load-bearing choice of R0: score the password by additively counting satisfied composition rules, rather than estimating crack-time with an entropy library. The no-dependencies floor decides it &mdash; zxcvbn / zxcvbn-ts cannot ship.</p>
+      <table class="compare-table">
+        <thead><tr><th>Criterion</th><th>Composition rules &middot; chosen</th><th>Entropy estimation (zxcvbn)</th></tr></thead>
+        <tbody>
+          <tr><td class="label-cell">No runtime dependency</td><td><span class="badge-yes">&check; ~10 lines native JS</span></td><td><span class="badge-no">&mdash; ~400&ndash;800 KB bundle</span></td></tr>
+          <tr><td class="label-cell">Zero network calls</td><td><span class="badge-yes">&check; inline</span></td><td><span class="badge-no">&mdash; CDN tag breaks floor</span></td></tr>
+          <tr><td class="label-cell">Per-keystroke cost</td><td><span class="badge-yes">&check; sub-millisecond</span></td><td><span class="badge-upgraded">&uarr; heavier on old devices</span></td></tr>
+          <tr><td class="label-cell">Detects <code>P@ssword1</code> as weak</td><td><span class="badge-no">&mdash; rewards it 5/5</span></td><td><span class="badge-yes">&check; dictionary / pattern aware</span></td></tr>
+          <tr><td class="label-cell">Honest about its limits</td><td><span class="badge-upgraded">&uarr; via UI copy</span></td><td><span class="badge-yes">&check; models guessability</span></td></tr>
+        </tbody>
+      </table>
+      <p>The trade-off is explicit and accepted: composition scoring is dependency-free and fast but blind to guessability. The mitigation is honesty in the UI copy, not a heavier engine. The R0 briefing collapsed the rule count into three bands; P1 SPEC later split out an explicit Neutral state and added a length-12 Strong gate (see <a href="#spec-bands">the band mapping</a>).</p>
+      <div class="flow">
+        <div class="fnode" data-id="band-weak" onclick="openSurface('band-weak')"><div class="nl">score &middot; band 1</div>Weak</div>
+        <span class="farr">&rarr;</span>
+        <div class="fnode" data-id="band-fair" onclick="openSurface('band-fair')"><div class="nl">score &middot; band 2</div>Fair</div>
+        <span class="farr">&rarr;</span>
+        <div class="fnode accent" data-id="band-strong" onclick="openSurface('band-strong')"><div class="nl">score &middot; band 3</div>Strong</div>
+      </div>
+      <div class="callout"><h4>The honest limitation, stated up front</h4><p>Composition-only scoring rewards predictable patterns: <code>P@ssword1</code> satisfies all five rules and scores Strong on a naive meter, yet is trivially crackable. The label vocabulary must avoid &ldquo;secure&rdquo; / &ldquo;safe&rdquo; and the copy must disclose that the meter checks composition &mdash; not entropy, breach exposure, or guessability. P1&rsquo;s length-12 gate blunts this by demoting <code>Password1!</code> to Fair.</p></div>
+    </section>
+
+    <section id="priorart">
+      <div class="sec-label">R0 &middot; prior art &amp; implementations</div>
+      <h2>The <em>shape</em> of the research</h2>
+      <p class="lede">Prior art converges on the additive model across multiple axes. The map below centres on that model; each spoke is a research axis that the briefing investigated. Click a node for the finding.</p>
+      <div class="mindmap">
+        <svg viewBox="0 0 600 360" role="img" aria-label="Concept map: additive composition scorer at the centre, with spokes to NIST stance, accessible field pattern, color-plus-text, per-keystroke performance, static deploy, and entropy alternative">
+          <g class="mm-edge">
+            <line x1="300" y1="180" x2="120" y2="70"/>
+            <line x1="300" y1="180" x2="480" y2="70"/>
+            <line x1="300" y1="180" x2="70" y2="180"/>
+            <line x1="300" y1="180" x2="530" y2="180"/>
+            <line x1="300" y1="180" x2="120" y2="290"/>
+            <line x1="300" y1="180" x2="480" y2="290"/>
+          </g>
+          <g class="mm-node center" role="button" tabindex="0" aria-label="Additive composition scorer" onclick="openSurface('pa-core')"><circle cx="300" cy="180" r="50"/><text x="300" y="176" text-anchor="middle">additive</text><text x="300" y="190" text-anchor="middle">scorer</text></g>
+          <g class="mm-node" role="button" tabindex="0" aria-label="NIST 800-63B stance" onclick="openSurface('pa-nist')"><rect x="30" y="50" width="180" height="40" rx="20"/><text x="120" y="75" text-anchor="middle">NIST 800-63B stance</text></g>
+          <g class="mm-node" role="button" tabindex="0" aria-label="Accessible field pattern" onclick="openSurface('pa-a11y')"><rect x="390" y="50" width="180" height="40" rx="20"/><text x="480" y="75" text-anchor="middle">accessible field</text></g>
+          <g class="mm-node" role="button" tabindex="0" aria-label="Color plus text" onclick="openSurface('pa-color')"><rect x="0" y="160" width="160" height="40" rx="20"/><text x="80" y="185" text-anchor="middle">color + text</text></g>
+          <g class="mm-node" role="button" tabindex="0" aria-label="Per-keystroke performance" onclick="openSurface('pa-perf')"><rect x="450" y="160" width="160" height="40" rx="20"/><text x="530" y="185" text-anchor="middle">performance</text></g>
+          <g class="mm-node" role="button" tabindex="0" aria-label="Static deploy constraints" onclick="openSurface('pa-deploy')"><rect x="30" y="270" width="180" height="40" rx="20"/><text x="120" y="295" text-anchor="middle">static deploy</text></g>
+          <g class="mm-node" role="button" tabindex="0" aria-label="Entropy alternative" onclick="openSurface('pa-entropy')"><rect x="390" y="270" width="180" height="40" rx="20"/><text x="480" y="295" text-anchor="middle">entropy alternative</text></g>
+        </svg>
+      </div>
+      <div class="legend">
+        <span class="lg"><i style="background:var(--accent)"></i>chosen / core</span>
+        <span class="lg"><i style="background:var(--green)"></i>accessibility floor</span>
+        <span class="lg"><i style="background:var(--amber)"></i>trade-off</span>
+        <span class="lg"><i style="background:var(--rose)"></i>rejected path</span>
+      </div>
+    </section>
+
+    <section id="risks">
+      <div class="sec-label">R0 &middot; risks &amp; anti-patterns</div>
+      <h2>What the meter <em>cannot</em> promise</h2>
+      <p class="lede">The briefing documents the risks honestly. None is a reason to abandon the approach &mdash; each is a reason to label limitations in the UI copy and constrain the spec downstream.</p>
+      <div class="acc">
+        <details open><summary><span class="badge" style="background:var(--rose-soft);color:var(--rose)">!</span> Composition rules nudge users toward predictable patterns<span class="chev">&rsaquo;</span></summary>
+          <div class="ac-body">Five rules produce <em>predictably formatted</em> passwords, not strong ones &mdash; users append <code>1!</code>, capitalize the first letter, or substitute <code>@</code> for <code>a</code>, all known attacker heuristics. NIST 800-63B-4 documents this directly. Mitigation: frame the checklist as &ldquo;satisfied rules&rdquo; not &ldquo;requirements,&rdquo; and lead with a length-first message.<div class="ref">research.md &middot; Risks</div></div></details>
+        <details><summary><span class="badge" style="background:var(--rose-soft);color:var(--rose)">!</span> False sense of security from composition-only scoring<span class="chev">&rsaquo;</span></summary>
+          <div class="ac-body">Without a dictionary / breach-corpus check, <code>P@ssword1</code> scores Strong on any naive composition meter. The meter cannot distinguish <code>Tr0ub4dor&amp;3</code> from <code>Password1!</code>. It is a UX affordance, not a security control &mdash; downstream consumers (a future auth flow) must not use its output as a gate.<div class="ref">research.md &middot; Risks</div></div></details>
+        <details><summary><span class="badge" style="background:var(--amber-soft);color:var(--amber)">+</span> Color-only indication fails WCAG 1.4.1<span class="chev">&rsaquo;</span></summary>
+          <div class="ac-body">A red / yellow / green bar is illegible to users with red-green colorblindness (~8% of males). Under SC 1.4.1, color must not be the sole signal. The text label is the primary indicator; the bar is decorative reinforcement. (This is also the <code>color-plus-text</code> floor.)<div class="ref">research.md &middot; Risks</div></div></details>
+        <details><summary><span class="badge" style="background:var(--amber-soft);color:var(--amber)">+</span> aria-live over-announcing on every keystroke<span class="chev">&rsaquo;</span></summary>
+          <div class="ac-body"><code>aria-live="assertive"</code> on a per-keystroke region interrupts the screen reader destructively. <code>polite</code> (or <code>role="status"</code>) defers until idle. Mitigation: keep the region minimal (band label only), set <code>aria-atomic="true"</code>, and never expose the checklist items as live regions. An optional 150&ndash;300 ms debounce calms announcement frequency &mdash; not throughput. (P1 fixed this at a 200 ms trailing debounce.)<div class="ref">research.md &middot; Risks</div></div></details>
+        <details><summary><span class="badge" style="background:var(--amber-soft);color:var(--amber)">+</span> Strength labels can be gamed or misread as a gate<span class="chev">&rsaquo;</span></summary>
+          <div class="ac-body">&ldquo;Strong&rdquo; in green is psychologically powerful &mdash; users and integrating developers may treat it as clearance to proceed. The label vocabulary must reflect composition state only and must not use &ldquo;Secure.&rdquo; A note that the meter checks composition rules, not breach exposure, is the responsible disclosure.<div class="ref">research.md &middot; Risks</div></div></details>
+        <details><summary><span class="badge" style="background:var(--purple-soft);color:var(--purple)">&middot;</span> Performance is not a real risk at this scale<span class="chev">&rsaquo;</span></summary>
+          <div class="ac-body">Five regex checks on a short string are O(1) per rule and well under 1 ms in any modern browser. No architectural mitigation is warranted for a vanilla single-page implementation.<div class="ref">research.md &middot; Risks</div></div></details>
+      </div>
+    </section>
+
+    <section id="questions">
+      <div class="sec-label">R0 &middot; open questions</div>
+      <h2>Carried <em>forward</em> to P1 SPEC</h2>
+      <p class="lede">The briefing settled direction but left several decisions for the spec to pin down precisely. P1 SPEC has since resolved most of these &mdash; the resolutions are noted below.</p>
+      <div class="edge-grid">
+        <div class="edge"><div class="n">band thresholds &middot; resolved</div><div class="t">Exact score &rarr; band map</div><p>P1 set Neutral/Weak/Fair/Strong with a length-8 Weak floor and a length-12 Strong gate.</p></div>
+        <div class="edge"><div class="n">live region role &middot; resolved</div><div class="t">role=status + aria-atomic</div><p>P1 chose <code>role="status"</code> (or <code>aria-live="polite"</code>) with <code>aria-atomic="true"</code>, announcing the full band phrase.</p></div>
+        <div class="edge"><div class="n">debounce &middot; resolved</div><div class="t">200 ms, live-region only</div><p>P1 fixed a 200 ms trailing debounce on the live-region text only; the bar and checklist stay instant.</p></div>
+        <div class="edge"><div class="n">stale state &middot; resolved</div><div class="t">Reset on clear</div><p>Empty input resets to Neutral &mdash; bar empty, live region cleared, pending announcement canceled.</p></div>
+      </div>
+      <div class="oq"><span class="q">5</span><div>How explicit should the in-UI disclosure be &mdash; a persistent helper line, a tooltip, or checklist-adjacent copy &mdash; to convey &ldquo;composition coverage, not crackability&rdquo; without scaring users? P1 settled on a persistent visible disclaimer.</div></div>
+      <div class="oq"><span class="q">6</span><div>Out of scope but noted: browser autofill, password managers, and DevTools console logging are outside the meter&rsquo;s control &mdash; the spec acknowledges the boundary rather than attempting to police it.</div></div>
+    </section>
+
+    <section id="spec-intent">
+      <div class="sec-label">P1 &middot; spec intent</div>
+      <h2>The spec&rsquo;s <em>intent</em>: educational nudging, not a guarantee</h2>
+      <p class="lede">P1 SPEC restated the value precisely: live, accessible, client-side guidance as the user types &mdash; a strength band, a color-and-text bar, and a checklist of which composition rules are satisfied.</p>
+      <p>The value is <em>educational nudging</em> toward longer, more varied passwords &mdash; explicitly framed as a composition guide, not a security guarantee. NIST SP 800-63B discourages composition rules as a gate but endorses a strength meter as guidance, with length as the primary signal. It runs entirely in the browser, transmits and stores nothing, and deploys as a single static page to GitHub Pages.</p>
+      <div class="callout"><h4>The spec inherits R0&rsquo;s decision as a fixed input</h4><p>The composition-over-entropy choice and the floors landed at R0 are not re-litigated in P1 &mdash; they are consumed as settled. The spec&rsquo;s job is to turn the chosen direction into a testable contract: an approach, a band mapping, 11 acceptance criteria, and boundaries.</p></div>
+    </section>
+
+    <section id="spec-approach">
+      <div class="sec-label">P1 &middot; chosen approach</div>
+      <h2>A clean, layered <em>three-file</em> meter</h2>
+      <p class="lede">The chosen approach (options level &mdash; the file-by-file blueprint is P2&rsquo;s job): a clean, layered single-page meter with the scoring core in an importable module. Three files, each a separate concern.</p>
+      <div class="flow">
+        <div class="fnode accent" data-id="file-score" onclick="openSurface('file-score')"><div class="nl">layer &middot; pure core</div>score.js</div>
+        <span class="farr">&rarr;</span>
+        <div class="fnode" data-id="file-index" onclick="openSurface('file-index')"><div class="nl">layer &middot; presentation</div>index.html</div>
+        <span class="farr">&rarr;</span>
+        <div class="fnode" data-id="file-test" onclick="openSurface('file-test')"><div class="nl">layer &middot; gate</div>score.test.js</div>
+      </div>
+      <p><code>score.js</code> is a pure ES module exporting <code>scorePassword(value)</code>; <code>index.html</code> imports <code>./score.js</code> via a sibling-relative <code>&lt;script type="module"&gt;</code> with an inline style and a thin render adapter; <code>score.test.js</code> is the <code>node --test</code> unit suite &mdash; the test-first red&rarr;green contract for P3 BUILD. Click a file for its responsibility.</p>
+      <div class="callout"><h4>Purity <em>is</em> the privacy floor, expressed structurally</h4><p>A pure <code>scorePassword</code> &mdash; no DOM, no globals, no network, no logging &mdash; <em>cannot</em> reach <code>fetch</code>/<code>console</code>/<code>storage</code>, so it cannot leak the password. The rejected alternatives are explicit: an entropy engine (zxcvbn) is excluded by the no-dependencies floor; a single inline <code>&lt;script&gt;</code> would block <code>node --test</code> from unit-testing the scorer; a multi-file CSS/JS split adds relative-path surface for no benefit. The pure-core-in-a-module shape is the smallest structure that is both deploy-safe on the <code>/matali-fullpipeline-dogfood/</code> subpath and unit-testable.</p></div>
+    </section>
+
+    <section id="spec-bands">
+      <div class="sec-label">P1 &middot; band mapping</div>
+      <h2>Four bands, and the <em>length-12</em> gate</h2>
+      <p class="lede">The band mapping is total and unambiguous. The length-12 Strong gate weights length per NIST and blunts the <code>Password1!</code> failure mode &mdash; making it Fair, not Strong.</p>
+      <table class="compare-table">
+        <thead><tr><th>Band</th><th>Condition</th></tr></thead>
+        <tbody>
+          <tr><td class="label-cell">Neutral</td><td>empty input &mdash; no band, no announcement, bar reset</td></tr>
+          <tr><td class="label-cell">Weak</td><td><code>length &lt; 8</code> &nbsp;OR&nbsp; (<code>length &ge; 8</code> AND &le;1 character class)</td></tr>
+          <tr><td class="label-cell">Fair</td><td><code>length &ge; 8</code> AND 2&ndash;4 character classes, but not Strong</td></tr>
+          <tr><td class="label-cell">Strong</td><td><code>length &ge; 12</code> AND all 4 character classes</td></tr>
+        </tbody>
+      </table>
+      <div class="callout"><h4>Two worked examples carried into the UI copy</h4><p><code>Password1!</code> (9 chars, all 4 classes) &rarr; <strong>Fair</strong> &mdash; not Strong, blocked by the length-12 gate. <code>correcthorsebatterystaple</code> (25 chars, 1 class) &rarr; <strong>Weak</strong> &mdash; the openly-disclosed passphrase limitation of composition-only scoring. The four character classes are lowercase, uppercase, digit, and symbol.</p></div>
+    </section>
+
+    <section id="spec-acceptance">
+      <div class="sec-label">P1 &middot; acceptance criteria</div>
+      <h2>Eleven <em>testable</em> criteria</h2>
+      <p class="lede">Each criterion carries a verify hint naming its instrument &mdash; <code>node</code> for the pure scorer and source-token gates, <code>browser</code> for DOM and live-region behavior. These are the executable contract every later phase is checked against. Click to expand.</p>
+      <div class="acc">
+        <details open><summary><span class="badge" style="background:var(--accent-soft);color:var(--accent)">1</span> Empty input is Neutral<span class="chev">&rsaquo;</span></summary>
+          <div class="ac-body">With the field empty (or after clearing), no band is shown, the bar is reset to empty/neutral, and the live region is empty &mdash; no stale &ldquo;Strong&rdquo; announcement persists.<div class="ref">verify &middot; browser: clear field &rarr; bar empty; live region textContent empty/neutral</div></div></details>
+        <details><summary><span class="badge" style="background:var(--accent-soft);color:var(--accent)">2</span> <code>length &lt; 8</code> is Weak<span class="chev">&rsaquo;</span></summary>
+          <div class="ac-body">Any input under 8 characters shows the text label &ldquo;Weak&rdquo; regardless of character variety.<div class="ref">verify &middot; browser: type 'Ab1!' &rarr; label text == Weak</div></div></details>
+        <details><summary><span class="badge" style="background:var(--accent-soft);color:var(--accent)">3</span> Mid-variety at <code>length &ge; 8</code> is Fair<span class="chev">&rsaquo;</span></summary>
+          <div class="ac-body">An 8+ character input with 2&ndash;3 character classes (and any 8&ndash;11 input even with all 4 classes) shows &ldquo;Fair&rdquo;.<div class="ref">verify &middot; browser: type 'abcdefg8' &rarr; Fair; type 'Password1!' &rarr; Fair</div></div></details>
+        <details><summary><span class="badge" style="background:var(--accent-soft);color:var(--accent)">4</span> Long + full-variety is Strong<span class="chev">&rsaquo;</span></summary>
+          <div class="ac-body">A <code>length &ge; 12</code> input with all 4 character classes shows &ldquo;Strong&rdquo;.<div class="ref">verify &middot; browser: type 'MyDogR3x!2024' &rarr; label text == Strong</div></div></details>
+        <details><summary><span class="badge" style="background:var(--accent-soft);color:var(--accent)">5</span> <code>Password1!</code> is Fair, not Strong<span class="chev">&rsaquo;</span></summary>
+          <div class="ac-body">The length-12 gate is observable: a 9-char all-class input does not reach Strong.<div class="ref">verify &middot; node: scorePassword('Password1!').band === 'fair'</div></div></details>
+        <details><summary><span class="badge" style="background:var(--accent-soft);color:var(--accent)">6</span> Live checklist of 5 rules<span class="chev">&rsaquo;</span></summary>
+          <div class="ac-body">The checklist renders all five rules (length &ge; 8, lowercase, uppercase, digit, symbol) framed as &ldquo;satisfied rules&rdquo;, each toggling satisfied/unsatisfied live on every keystroke matching <code>scorePassword(...).rules</code>.<div class="ref">verify &middot; browser: type 'aB3$' &rarr; lower+upper+digit+symbol satisfied, length unsatisfied</div></div></details>
+        <details><summary><span class="badge" style="background:var(--accent-soft);color:var(--accent)">7</span> Color is never the sole signal; label is explicit<span class="chev">&rsaquo;</span></summary>
+          <div class="ac-body">The band is conveyed by the visible text label (primary) in addition to bar color; the <code>&lt;input type="password"&gt;</code> has an explicit <code>&lt;label for&gt;</code> with a matching <code>id</code> (no placeholder-as-label).<div class="ref">verify &middot; browser: label[for=pw] references the input id; band text node present alongside the bar</div></div></details>
+        <details><summary><span class="badge" style="background:var(--accent-soft);color:var(--accent)">8</span> Accessible live announcement, value never leaked<span class="chev">&rsaquo;</span></summary>
+          <div class="ac-body">A single <code>role="status"</code> (or <code>aria-live="polite"</code>) <code>aria-atomic="true"</code> region announces only the band phrase (e.g. &ldquo;Password strength: Fair&rdquo;) and never the password value or any rule text containing it.<div class="ref">verify &middot; browser: live region uses role=status/aria-live=polite; text never equals the typed value</div></div></details>
+        <details><summary><span class="badge" style="background:var(--accent-soft);color:var(--accent)">9</span> Zero exfiltration<span class="chev">&rsaquo;</span></summary>
+          <div class="ac-body">No <code>fetch</code>/XHR, no <code>console.*</code> of the value, no <code>localStorage</code>/<code>sessionStorage</code> writes; the password value never enters the live region or any readable attribute.<div class="ref">verify &middot; node: score.js source contains no fetch/console/localStorage tokens</div></div></details>
+        <details><summary><span class="badge" style="background:var(--accent-soft);color:var(--accent)">10</span> Honest framing<span class="chev">&rsaquo;</span></summary>
+          <div class="ac-body">A persistent visible disclaimer states the meter checks composition only &mdash; not entropy, breach exposure, or guessability; UI copy never uses the words &ldquo;secure&rdquo; or &ldquo;safe&rdquo;.<div class="ref">verify &middot; browser: disclaimer present; body text contains neither 'secure' nor 'safe'</div></div></details>
+        <details><summary><span class="badge" style="background:var(--accent-soft);color:var(--accent)">11</span> <code>scorePassword</code> is pure and unit-tested<span class="chev">&rsaquo;</span></summary>
+          <div class="ac-body"><code>node --test</code> over <code>score.test.js</code> passes, covering each band boundary (Neutral/Weak/Fair/Strong), the length-8 and length-12 thresholds, and each of the 5 rule flags.<div class="ref">verify &middot; node: node --test exits 0; every band + both length thresholds covered</div></div></details>
+      </div>
+    </section>
+
+    <section id="spec-boundaries">
+      <div class="sec-label">P1 &middot; boundaries</div>
+      <h2>Always, ask-first, <em>never</em></h2>
+      <p class="lede">The spec draws hard edges around the implementer&rsquo;s discretion: a set of invariants that must always hold, a set of changes that require asking first, and a set of things that must never happen.</p>
+      <div class="edge-grid">
+        <div class="edge"><div class="n">always-do</div><div class="t">The non-negotiable invariants</div><p>Vanilla HTML/CSS/JS only; a pure side-effect-free scorer with <code>node --test</code> coverage (SoC/SRP); sibling-relative asset paths; explicit <code>&lt;label for&gt;</code>; a single polite atomic live region carrying only the band label; color <strong>and</strong> text for the band; reset to Neutral on empty input; the persistent composition-only disclaimer.</p></div>
+        <div class="edge"><div class="n">ask-first</div><div class="t">Requires explicit approval</div><p>Changing the band thresholds (the length-8 / length-12 gates or class counts); adding any file, dependency, build step, CDN script, or web font; editing <code>.github/workflows/pages.yml</code>; changing the band label vocabulary.</p></div>
+        <div class="edge"><div class="n">never-do</div><div class="t">Hard prohibitions</div><p>Transmit, log, or persist the password value; use <code>aria-live="assertive"</code>/<code>role="alert"</code> for the per-keystroke region; use the words &ldquo;secure&rdquo; or &ldquo;safe&rdquo;; use root-relative asset paths (<code>/style.css</code>); add an external library, CDN, bundler, or web font; present the meter as a security gate.</p></div>
+      </div>
+    </section>
+
+    <section id="spec-floors">
+      <div class="sec-label">P1 &middot; inherited floors</div>
+      <h2>Eight <em>inherited</em> floors</h2>
+      <p class="lede">The spec carries a non-disarmable floors block of eight constraints &mdash; the five from R0 plus three made explicit at spec time: <code>live-region-polite-not-assertive</code>, <code>relative-asset-paths-only</code>, and <code>no-security-guarantee-claim</code>. Each binds P2 PLAN and every later phase. Click a floor for its rule text and source.</p>
+      <div class="floors">
+        <button class="floor" onclick="openSurface('floor-network')"><span class="fid">no-network-calls</span><span class="frule">The password value must never be transmitted, logged to console, or written to local/session storage &mdash; all scoring is client-side with zero XHR/fetch.</span><span class="farrow">&rarr;</span></button>
+        <button class="floor" onclick="openSurface('floor-nobuild')"><span class="fid">no-build-no-dependencies</span><span class="frule">Vanilla HTML/CSS/JS only &mdash; no libraries, CDN scripts, bundlers, build steps, or web fonts. Excludes zxcvbn even via a no-build CDN tag.</span><span class="farrow">&rarr;</span></button>
+        <button class="floor" onclick="openSurface('floor-arialive')"><span class="fid">aria-live-no-password-value</span><span class="frule">The live region (or role=status equivalent) carries only the band label &mdash; the password value never enters it or any announced/readable attribute.</span><span class="farrow">&rarr;</span></button>
+        <button class="floor" onclick="openSurface('floor-polite')"><span class="fid">live-region-polite-not-assertive</span><span class="frule">The continuously-updating strength live region must use <code>aria-live="polite"</code> / <code>role="status"</code> &mdash; never assertive/alert for the per-keystroke update.</span><span class="farrow">&rarr;</span></button>
+        <button class="floor" onclick="openSurface('floor-label')"><span class="fid">label-explicit-association</span><span class="frule">The input needs an explicit <code>&lt;label for&gt;</code> association via matching id &mdash; placeholder text is not a valid substitute.</span><span class="farrow">&rarr;</span></button>
+        <button class="floor" onclick="openSurface('floor-colortext')"><span class="fid">color-plus-text</span><span class="frule">Strength indication must pair a text label with color &mdash; color alone is prohibited as the sole signal.</span><span class="farrow">&rarr;</span></button>
+        <button class="floor" onclick="openSurface('floor-relpaths')"><span class="fid">relative-asset-paths-only</span><span class="frule">All asset references must be sibling-relative (<code>score.js</code>), never root-relative (<code>/score.js</code>) &mdash; the project site is served under a <code>/repo-name/</code> subpath.</span><span class="farrow">&rarr;</span></button>
+        <button class="floor" onclick="openSurface('floor-noguarantee')"><span class="fid">no-security-guarantee-claim</span><span class="frule">The meter is a composition guide, never a security gate; copy must not use &ldquo;secure&rdquo;/&ldquo;safe&rdquo; and must disclose it checks composition only &mdash; not entropy, breach, or guessability.</span><span class="farrow">&rarr;</span></button>
+      </div>
+    </section>
+
+    <section id="plan-dag">
+      <div class="sec-label">P2 &middot; build DAG</div>
+      <h2>A seven-unit <em>dependency</em> DAG</h2>
+      <p class="lede">P2 PLAN decomposed the approved approach into seven dependency-ordered build units. The topological build order is <strong>U1 &middot; U3</strong> (roots) &rarr; <strong>U2 &middot; U4</strong> &rarr; <strong>U5</strong> &rarr; <strong>U6</strong> &rarr; <strong>U7</strong>. Click a unit for its complexity, files, interfaces, and definition of done.</p>
+      <div class="depgraph">
+        <svg viewBox="0 0 620 300" role="img" aria-label="Build dependency graph: U1 scorer core and U3 HTML skeleton are roots; U2 test gate depends on U1; U4 render adapter depends on U1 and U3; U5 wiring depends on U1, U3, U4; U6 exfil guard depends on U1 and U5; U7 deploy readiness depends on U2 through U6">
+          <g class="dg-edge">
+            <line x1="150" y1="60" x2="300" y2="60"/>
+            <line x1="150" y1="60" x2="300" y2="150"/>
+            <line x1="150" y1="220" x2="300" y2="150"/>
+            <line x1="300" y1="150" x2="430" y2="150"/>
+            <line x1="150" y1="60" x2="430" y2="150"/>
+            <line x1="150" y1="220" x2="430" y2="150"/>
+            <line x1="150" y1="60" x2="540" y2="220"/>
+            <line x1="430" y1="150" x2="540" y2="220"/>
+            <line x1="300" y1="60" x2="540" y2="220"/>
+            <line x1="430" y1="150" x2="540" y2="60"/>
+          </g>
+          <g class="dg-node" role="button" tabindex="0" aria-label="U1 pure scorePassword core" onclick="openSurface('u1')"><rect x="70" y="40" width="160" height="42" rx="8"/><text x="150" y="60" text-anchor="middle">U1 &middot; score.js core</text><text class="dgsub" x="150" y="74" text-anchor="middle">design-judgment &middot; root</text></g>
+          <g class="dg-node" role="button" tabindex="0" aria-label="U2 node test gate" onclick="openSurface('u2')"><rect x="220" y="40" width="160" height="42" rx="8"/><text x="300" y="60" text-anchor="middle">U2 &middot; node --test gate</text><text class="dgsub" x="300" y="74" text-anchor="middle">mechanical &middot; dep U1</text></g>
+          <g class="dg-node" role="button" tabindex="0" aria-label="U3 accessible HTML skeleton" onclick="openSurface('u3')"><rect x="70" y="200" width="160" height="42" rx="8"/><text x="150" y="220" text-anchor="middle">U3 &middot; index.html</text><text class="dgsub" x="150" y="234" text-anchor="middle">design-judgment &middot; root</text></g>
+          <g class="dg-node" role="button" tabindex="0" aria-label="U4 declarative render adapter" onclick="openSurface('u4')"><rect x="350" y="129" width="160" height="42" rx="8"/><text x="430" y="149" text-anchor="middle">U4 &middot; render adapter</text><text class="dgsub" x="430" y="163" text-anchor="middle">integration &middot; dep U1,U3</text></g>
+          <g class="dg-node" role="button" tabindex="0" aria-label="U5 input wiring and debounce" onclick="openSurface('u5')"><rect x="460" y="40" width="160" height="42" rx="8"/><text x="540" y="60" text-anchor="middle">U5 &middot; wiring+debounce</text><text class="dgsub" x="540" y="74" text-anchor="middle">integration &middot; dep U1,U3,U4</text></g>
+          <g class="dg-node leaf" role="button" tabindex="0" aria-label="U6 zero exfiltration guard" onclick="openSurface('u6')"><rect x="300" y="240" width="150" height="42" rx="8"/><text x="375" y="260" text-anchor="middle">U6 &middot; zero-exfil guard</text><text class="dgsub" x="375" y="274" text-anchor="middle">mechanical &middot; dep U1,U5</text></g>
+          <g class="dg-node leaf" role="button" tabindex="0" aria-label="U7 deploy readiness gate" onclick="openSurface('u7')"><rect x="460" y="200" width="160" height="42" rx="8"/><text x="540" y="220" text-anchor="middle">U7 &middot; deploy-readiness</text><text class="dgsub" x="540" y="234" text-anchor="middle">mechanical &middot; dep U2-U6</text></g>
+        </svg>
+      </div>
+      <div class="legend">
+        <span class="lg"><i style="background:var(--accent)"></i>root / final gate</span>
+        <span class="lg"><i style="background:var(--border-strong)"></i>dependency edge</span>
+      </div>
+      <div class="callout"><h4>The single load-bearing decision, specified exactly</h4><p>The band logic lives in U1: <code>classCount</code> = number of the 4 character-class rules satisfied. Neutral when <code>length===0</code>; Weak when <code>length&lt;8</code> OR (<code>length&ge;8</code> AND <code>classCount&le;1</code>); Strong when <code>length&ge;12</code> AND <code>classCount===4</code>; Fair otherwise. <code>satisfiedCount</code> counts all 5 true flags. The scorer touches no DOM, no globals, no network, no logging, no storage &mdash; purity is the privacy floor expressed structurally.</p></div>
+    </section>
+
+    <section id="plan-map">
+      <div class="sec-label">P2 &middot; acceptance map</div>
+      <h2>Every criterion <em>covered</em></h2>
+      <p class="lede">The plan maps all 11 spec acceptance criteria onto the units that satisfy them &mdash; no criterion is left without an owner. This is the traceability contract from spec to build.</p>
+      <table class="compare-table">
+        <thead><tr><th>Spec acceptance criterion</th><th>Build unit(s)</th></tr></thead>
+        <tbody>
+          <tr><td class="label-cell">1 &middot; Empty input is Neutral (bar reset, live region empty, no stale Strong)</td><td>U3, U4, U5</td></tr>
+          <tr><td class="label-cell">2 &middot; <code>length&lt;8</code> is Weak regardless of variety</td><td>U1, U4</td></tr>
+          <tr><td class="label-cell">3 &middot; <code>length&ge;8</code> with 2&ndash;3 classes (or 8&ndash;11 with all 4) is Fair</td><td>U1, U4</td></tr>
+          <tr><td class="label-cell">4 &middot; <code>length&ge;12</code> with all 4 classes is Strong</td><td>U1, U4</td></tr>
+          <tr><td class="label-cell">5 &middot; <code>Password1!</code> is Fair not Strong (length-12 gate)</td><td>U1, U2</td></tr>
+          <tr><td class="label-cell">6 &middot; Live 5-rule checklist toggles per keystroke matching <code>rules</code></td><td>U1, U3, U4, U5</td></tr>
+          <tr><td class="label-cell">7 &middot; Color never sole signal; explicit <code>&lt;label for&gt;</code> bound to input id</td><td>U3, U4</td></tr>
+          <tr><td class="label-cell">8 &middot; <code>role=status</code>/polite atomic region announces only the band label</td><td>U3, U5</td></tr>
+          <tr><td class="label-cell">9 &middot; Zero exfiltration: no fetch/XHR/console/localStorage of the value</td><td>U1, U5, U6</td></tr>
+          <tr><td class="label-cell">10 &middot; Persistent composition-only disclaimer; copy never uses 'secure'/'safe'</td><td>U3</td></tr>
+          <tr><td class="label-cell">11 &middot; <code>scorePassword</code> pure + <code>node --test</code> covers every band, both thresholds, all 5 flags</td><td>U1, U2</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="plan-risks">
+      <div class="sec-label">P2 &middot; risks &amp; rollback</div>
+      <h2>Risks, and the <em>rollback</em> path</h2>
+      <p class="lede">The plan documents its residual risks and a clean rollback path. Every unit is additive &mdash; a new file or an additive edit to <code>index.html</code> &mdash; so reverting is atomic.</p>
+      <div class="acc">
+        <details open><summary><span class="badge" style="background:var(--amber-soft);color:var(--amber)">+</span> Composition-only ceiling (accepted, disclosed)<span class="chev">&rsaquo;</span></summary>
+          <div class="ac-body"><code>Password1!</code> (9 chars, 4 classes) &rarr; Fair via the length-12 gate; <code>correcthorsebatterystaple</code> &rarr; Weak (no upper/digit/symbol). Inherent to composition scoring; surfaced in the persistent disclaimer per the <code>no-security-guarantee-claim</code> floor &mdash; not a defect.<div class="ref">plan.md &middot; Risks &amp; Rollback</div></div></details>
+        <details><summary><span class="badge" style="background:var(--rose-soft);color:var(--rose)">!</span> Subpath 404 risk<span class="chev">&rsaquo;</span></summary>
+          <div class="ac-body">A root-relative asset would 404 under <code>/matali-fullpipeline-dogfood/</code>; mitigated by sibling-relative <code>./score.js</code> (U3/U4) and verified end-to-end by U7.<div class="ref">plan.md &middot; Risks &amp; Rollback</div></div></details>
+        <details><summary><span class="badge" style="background:var(--amber-soft);color:var(--amber)">+</span> Live-region over-announcing<span class="chev">&rsaquo;</span></summary>
+          <div class="ac-body">Fast typists trigger excessive announcements; mitigated by the 200 ms trailing debounce on the live-region text only (U5) &mdash; the visual bar and checklist stay instant.<div class="ref">plan.md &middot; Risks &amp; Rollback</div></div></details>
+        <details><summary><span class="badge" style="background:var(--amber-soft);color:var(--amber)">+</span> Stale announcement<span class="chev">&rsaquo;</span></summary>
+          <div class="ac-body">Clearing the field must not leave a stale &ldquo;Strong&rdquo;; U5 resets to Neutral and cancels any pending debounced announcement.<div class="ref">plan.md &middot; Risks &amp; Rollback</div></div></details>
+        <details><summary><span class="badge" style="background:var(--purple-soft);color:var(--purple)">&middot;</span> Rollback path<span class="chev">&rsaquo;</span></summary>
+          <div class="ac-body">Every unit is additive; <code>git revert --no-edit HEAD &amp;&amp; git push</code> is atomic with no orphaned assets; deploy re-triggers via <code>workflow_dispatch</code> on <code>pages.yml</code>. Per-unit recovery: U1/U2 revert the module + tests; U3&ndash;U5 revert the <code>index.html</code> edit; U6/U7 are read-only guards with no production code to roll back.<div class="ref">plan.md &middot; Risks &amp; Rollback</div></div></details>
+      </div>
+    </section>
+  </main>
+  <aside class="panel" id="panel"><span class="x" onclick="closeD()">&#10005;</span>
+    <div class="pk" id="panelKicker">Detail</div>
+    <div class="pb" id="panelBody"></div></aside>
+  <div id="sheets">
+    <dialog class="sheet" id="sheet-phase-r0">
+      <button class="x" onclick="this.closest('dialog').close()">&#10005;</button>
+      <div class="sf-body">
+        <div class="sf-kicker">Phase R0</div>
+        <h2 class="sf-h">Research &mdash; complete</h2>
+        <p class="sf-summary">R0 scoped the problem, fanned out across research axes, gap-checked, and synthesized the research.md briefing with a non-disarmable floors block. Its output binds every later phase. P1 SPEC consumed these floors and the composition-scorer decision as fixed inputs.</p>
+        <div class="sf-where"><code class="sf-loc">research.md</code></div>
+        <ul class="sf-points">
+          <li>Decision landed: additive composition-rule scorer over entropy estimation.</li>
+          <li>Five binding floors carried forward, each traced to an external authority.</li>
+          <li>Honest limitation documented: composition-only rewards <code>P@ssword1</code>.</li>
+          <li>Six open questions deferred to P1 SPEC.</li>
+        </ul>
+        <div class="sf-related"><button class="chip neutral" onclick="openSurface('pa-core')">pa-core</button><button class="chip neutral" onclick="openSurface('band-strong')">band-strong</button><button class="chip neutral" onclick="openSurface('phase-p1')">phase-p1</button></div>
+      </div>
+    </dialog>
+    <dialog class="sheet" id="sheet-phase-p1">
+      <button class="x" onclick="this.closest('dialog').close()">&#10005;</button>
+      <div class="sf-body">
+        <div class="sf-kicker">Phase P1</div>
+        <h2 class="sf-h">Spec &mdash; complete</h2>
+        <p class="sf-summary">P1 ran spec-explore (parallel code-explorer + code-architect) and a converging human dialogue, then assembled spec.md: the intent, a clean layered three-file approach, a four-band mapping with a length-12 Strong gate, 11 testable acceptance criteria, the always/ask/never boundaries, and an eight-floor inherited block. It is the executable contract P2 PLAN decomposed.</p>
+        <div class="sf-where"><code class="sf-loc">spec.md</code></div>
+        <ul class="sf-points">
+          <li>Approach: pure <code>scorePassword()</code> module + importing <code>index.html</code> + <code>node --test</code> suite.</li>
+          <li>Band mapping resolved Neutral/Weak/Fair/Strong with length-8 and length-12 gates.</li>
+          <li>Eleven acceptance criteria, each with a node/browser verify hint.</li>
+          <li>R0&rsquo;s five floors formalized to eight.</li>
+        </ul>
+        <div class="sf-related"><button class="chip neutral" onclick="openSurface('file-score')">file-score</button></div>
+      </div>
+    </dialog>
+    <dialog class="sheet" id="sheet-phase-p2">
+      <button class="x" onclick="this.closest('dialog').close()">&#10005;</button>
+      <div class="sf-body">
+        <div class="sf-kicker">Phase P2</div>
+        <h2 class="sf-h">Plan &mdash; complete</h2>
+        <p class="sf-summary">P2 read the approved spec and research floors, ran a judge-panel Best-of-N, and assembled plan.md: a seven-unit dependency DAG with the topo order U1&middot;U3 &rarr; U2&middot;U4 &rarr; U5 &rarr; U6 &rarr; U7, an acceptance map covering all 11 criteria, and a risks-and-rollback section. The band logic is pinned exactly in U1.</p>
+        <div class="sf-where"><code class="sf-loc">plan.md</code></div>
+        <ul class="sf-points">
+          <li>Three files at repo root so the existing <code>pages.yml</code> <code>path: "."</code> upload publishes them.</li>
+          <li>Every unit additive &mdash; rollback is an atomic <code>git revert</code>.</li>
+          <li>U6/U7 are read-only guards: source-token exfil gate + static-deploy smoke.</li>
+        </ul>
+        <div class="sf-related"><button class="chip neutral" onclick="openSurface('u1')">u1</button><button class="chip neutral" onclick="openSurface('u7')">u7</button></div>
+      </div>
+    </dialog>
+    <dialog class="sheet" id="sheet-pa-nist">
+      <button class="x" onclick="this.closest('dialog').close()">&#10005;</button>
+      <div class="sf-body">
+        <div class="sf-kicker">Prior art</div>
+        <h2 class="sf-h">NIST SP 800-63B stance</h2>
+        <p class="sf-summary">NIST explicitly discourages mandatory composition rules as a verifier policy, citing predictable user responses (&ldquo;password&rdquo; &rarr; &ldquo;Password1!&rdquo;). Rev 4 strengthens this to &ldquo;shall not&rdquo; impose arbitrary complexity. NIST does recommend offering a strength meter as guidance after a blocklist rejection &mdash; so a composition checklist is defensible as user guidance, not a gate. Length is called out as the primary strength signal (8-char floor, 15+ preferred).</p>
+        <div class="sf-where"><code class="sf-loc">research.md &middot; Prior Art</code><code class="sf-loc">research.md &middot; Constraints &amp; Floors</code></div>
+        <ul class="sf-points">
+          <li>Frame the five-rule checklist as &ldquo;what you&rsquo;ve achieved,&rdquo; not &ldquo;requirements.&rdquo;</li>
+          <li>Weight length over character diversity to align with NIST intent (P1&rsquo;s length-12 Strong gate does this).</li>
+        </ul>
+      </div>
+    </dialog>
+    <dialog class="sheet" id="sheet-pa-a11y">
+      <button class="x" onclick="this.closest('dialog').close()">&#10005;</button>
+      <div class="sf-body">
+        <div class="sf-kicker">Prior art</div>
+        <h2 class="sf-h">Accessible password field pattern</h2>
+        <p class="sf-summary">The W3C WAI Complete Password Example is canonical: an explicit <code>&lt;label for&gt;</code> tied to a matching <code>id</code> (no placeholder-as-label), and a semantically separate live region that receives the strength text on each keystroke. The live region uses <code>aria-live="polite"</code> / <code>role="status"</code> &mdash; not assertive, which interrupts destructively &mdash; and contains only the band label, never the password value.</p>
+        <div class="sf-where"><code class="sf-loc">research.md &middot; Prior Art</code><code class="sf-loc">research.md &middot; Existing Implementations</code></div>
+        <ul class="sf-points">
+          <li>The Drupal #521904 case study confirms omitting the live region leaves screen-reader users with no feedback.</li>
+          <li><code>aria-describedby</code> pointing at the rules list announces them on focus.</li>
+        </ul>
+      </div>
+    </dialog>
+    <dialog class="sheet" id="sheet-pa-entropy">
+      <button class="x" onclick="this.closest('dialog').close()">&#10005;</button>
+      <div class="sf-body">
+        <div class="sf-kicker">Rejected path</div>
+        <h2 class="sf-h">Entropy estimation (zxcvbn)</h2>
+        <p class="sf-summary">Dropbox&rsquo;s zxcvbn (and the TypeScript port zxcvbn-ts) detect dictionary words, keyboard walks, date patterns, and l33t substitutions, then estimate crack-time as a 0&ndash;4 score. It correctly flags that composition rules &ldquo;allow weak passwords (like P@ssword1) and disallow strong passwords.&rdquo; But the minified bundle is ~400&ndash;800 KB; even a no-build CDN <code>&lt;script src&gt;</code> tag introduces a runtime dependency &mdash; which the no-dependencies floor forbids. Rejected for this feature; its accuracy advantage is the documented cost of the composition model.</p>
+        <div class="sf-where"><code class="sf-loc">research.md &middot; Prior Art</code><code class="sf-loc">research.md &middot; Existing Implementations</code></div>
+      </div>
+    </dialog>
+    <dialog class="sheet" id="sheet-u1">
+      <button class="x" onclick="this.closest('dialog').close()">&#10005;</button>
+      <div class="sf-body">
+        <div class="sf-kicker">Build unit &middot; design-judgment &middot; root</div>
+        <h2 class="sf-h">U1 &mdash; Pure scorePassword core</h2>
+        <p class="sf-summary">The foundation, built test-first. <code>score.js</code> exports a pure <code>scorePassword(value)</code> returning <code>{ band, rules, satisfiedCount }</code> &mdash; no DOM, no globals, no network, no logging, no storage. <code>rules</code> is <code>{length:len&ge;8, lower:/[a-z]/, upper:/[A-Z]/, digit:/[0-9]/, symbol:/[^A-Za-z0-9]/}</code>; <code>satisfiedCount</code> counts all 5 true flags; <code>classCount</code> counts the 4 class flags; band follows the Neutral/Weak/Fair/Strong rules with the length-8 and length-12 gates. Purity is the privacy floor expressed structurally.</p>
+        <div class="sf-where"><code class="sf-loc">plan.md &middot; Unit U1</code><code class="sf-loc">score.js (create)</code><code class="sf-loc">score.test.js (test)</code></div>
+        <ul class="sf-points">
+          <li>depends-on: [] (root) &mdash; built test-first against its own node --test suite.</li>
+          <li>RED&rarr;GREEN covers bands, the length-8 and length-12 thresholds, the 5 rule flags, and purity (two calls deeply-equal, no shared mutable state).</li>
+          <li>DoD: pure ES module, <code>node --test score.test.js</code> exits 0; satisfies acceptance #5, underpins #6 and #11, drives #2/#3/#4 band logic.</li>
+        </ul>
+        <div class="sf-related"><button class="chip neutral" onclick="openSurface('u2')">u2</button><button class="chip neutral" onclick="openSurface('u4')">u4</button></div>
+      </div>
+    </dialog>
+    <dialog class="sheet" id="sheet-u5">
+      <button class="x" onclick="this.closest('dialog').close()">&#10005;</button>
+      <div class="sf-body">
+        <div class="sf-kicker">Build unit &middot; integration &middot; dep U1, U3, U4</div>
+        <h2 class="sf-h">U5 &mdash; Input wiring + debounced announcement</h2>
+        <p class="sf-summary">A thin listener on <code>input#pw</code>: on each <code>input</code> event it reads the value, calls <code>scorePassword(value)</code>, and synchronously calls <code>render(result)</code> (checklist + bar + label per keystroke). It separately updates the live region <code>#sr-status</code> to <code>PRESENTATION[band].livePhrase</code> via a 200 ms trailing debounce &mdash; the debounce applies ONLY to the live-region text, not to render. On empty value it resets to Neutral and clears the live region, canceling any pending announcement so no stale &ldquo;Strong&rdquo; is announced. The value never enters the live region or any readable attribute; no fetch/XHR/console/localStorage anywhere.</p>
+        <div class="sf-where"><code class="sf-loc">plan.md &middot; Unit U5</code><code class="sf-loc">index.html (modify)</code></div>
+        <ul class="sf-points">
+          <li>Checklist is live (per keystroke); only the live-region text is debounced.</li>
+          <li>Satisfies acceptance #1 (no stale Strong), #6 (live checklist), #8 (accessible announcement, value never leaked); contributes to #9.</li>
+        </ul>
+        <div class="sf-related"><button class="chip neutral" onclick="openSurface('u6')">u6</button></div>
+      </div>
+    </dialog>
+  </div>
+  <dialog class="sheet pane-dialog" id="paneDialog"><button class="x" onclick="this.closest('dialog').close()">&#10005;</button><div class="sf-body" id="paneDialogBody"></div></dialog>
+  <script>
+// renderSurface — build a structured detail DOM from a DET record into `host`
+function renderSurface(d,host){if(!d||!host)return;let h='';
+ if(d.h)h+=`<h3 class="sf-h">${d.h}</h3>`;
+ if(d.summary)h+=`<p class="sf-summary">${d.summary}</p>`;
+ if(d.where&&d.where.length)h+=`<div class="sf-where">${d.where.map(w=>`<code class="sf-loc">${w}</code>`).join('')}</div>`;
+ if(d.code&&d.code.length)h+=d.code.map(c=>`<figure class="sf-code"><figcaption>${c.file||''}</figcaption><pre><code>${c.snippet||''}</code></pre></figure>`).join('');
+ if(d.points&&d.points.length)h+=`<ul class="sf-points">${d.points.map(p=>`<li>${p}</li>`).join('')}</ul>`;
+ if(d.components)h+=d.components;
+ if(d.related&&d.related.length)h+=`<div class="sf-related">${d.related.map(r=>`<button class="chip neutral" onclick="openSurface('${r}')">${r}</button>`).join('')}</div>`;
+ host.innerHTML=h;}
+const panel=document.getElementById('panel');
+function openPane(id){const d=DET[id];if(!d)return;
+ const k=document.getElementById('panelKicker');if(k)k.textContent=d.k||'Detail';
+ renderSurface(d,document.getElementById('panelBody'));panel.classList.add('open');}
+const _stack=[]; const MAX_DEPTH=3;
+function _capPush(el){if(!el||el.open)return;if(_stack.length>=MAX_DEPTH){const t=_stack.pop();if(t)t.close();}el.showModal();_stack.push(el);}
+function openSurface(id){const k=(typeof SURF!=='undefined'&&SURF[id])||'pane';
+ if(k==='sheet'){const el=document.getElementById('sheet-'+id);_capPush(el);return;}
+ if(_stack.length){const pd=document.getElementById('paneDialog'),d=DET[id],b=document.getElementById('paneDialogBody');
+  renderSurface(d,b);if(d&&d.k)b.insertAdjacentHTML('afterbegin',`<div class="sf-kicker">${d.k}</div>`);_capPush(pd);}
+ else openPane(id);}
+document.querySelectorAll('dialog.sheet').forEach(dlg=>{
+ dlg.addEventListener('close',()=>{const i=_stack.indexOf(dlg);if(i>-1)_stack.splice(i,1);});
+ dlg.addEventListener('click',e=>{if(e.target===dlg)dlg.close();});});
+function openCard(el){if(!el)return;openPane(el.dataset.id||'');}
+function openD(id){openSurface(id);}
+function closeD(){panel.classList.remove('open');}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!_stack.length)closeD();});
+function tgl(){const h=document.documentElement;const t=h.getAttribute('data-theme')==='dark'?'light':'dark';h.setAttribute('data-theme',t);try{localStorage.setItem('wt-theme',t);}catch(e){}}
+(function(){try{const t=localStorage.getItem('wt-theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}})();
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('vis');}}),{threshold:.1});
+document.querySelectorAll('section').forEach(s=>io.observe(s));
+const prog=document.getElementById('prog');
+addEventListener('scroll',()=>{const sc=scrollY/(document.body.scrollHeight-innerHeight)*100;if(prog)prog.style.width=sc+'%';
+ let cur='';document.querySelectorAll('section[id]').forEach(s=>{if(scrollY>=s.offsetTop-120)cur=s.id;});
+ document.querySelectorAll('.nav-links a').forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+cur));},{passive:true});
+const DET={
+ "floor-network":{k:"Floor · binding",h:"no-network-calls",summary:"The password value must never be transmitted over the network, logged to console, or written to localStorage / sessionStorage — all scoring is client-side only, in-browser, with zero XHR / fetch calls.",where:["research.md · Constraints &amp; Floors","spec.md · Floors","NIST SP 800-63B §5.1.1"],points:["Standard <code>type=\"password\"</code> masks the value in the DOM; the floor extends that to logs and storage.","No third-party analytics or CDN scripts may touch the field value."],related:["floor-nobuild","floor-arialive"]},
+ "floor-arialive":{k:"Floor · binding",h:"aria-live-no-password-value",summary:"The aria-live region (or role=status equivalent) must contain only the strength band label — 'Weak', 'Fair', 'Strong'. The password value must never be echoed into the live region or any announced / readable attribute.",where:["research.md · Constraints &amp; Floors","spec.md · Floors","W3C WAI Complete Password Example","WCAG 1.3.1"],points:["A poorly-coded live region could echo the value even though the input is masked — the floor forbids it.","Use <code>polite</code> (implicit in role=status), never assertive, for the per-keystroke update."],related:["floor-polite","floor-colortext","pa-a11y"]},
+ "floor-polite":{k:"Floor · binding",h:"live-region-polite-not-assertive",summary:"The continuously-updating strength live region must use <code>aria-live=\"polite\"</code> (or <code>role=\"status\"</code>); <code>aria-live=\"assertive\"</code> / <code>role=\"alert\"</code> must not be used for the per-keystroke status update. Assertive interrupts the screen reader destructively on every keystroke.",where:["spec.md · Floors","MDN ARIA live regions","W3C WAI password example"],points:["Made explicit at spec time — implicit in R0&rsquo;s aria-live floor, separated out so the build gate can check it directly.","U5 pairs polite/status with <code>aria-atomic=\"true\"</code> and a 200 ms trailing debounce."],related:["u5"]},
+ "floor-label":{k:"Floor · binding",h:"label-explicit-association",summary:"The password input must have an explicit <code>&lt;label for=...&gt;</code> association via a matching id. Placeholder text is not a valid substitute for a label.",where:["research.md · Constraints &amp; Floors","spec.md · Floors","WCAG 1.3.1 / 4.1.2","W3C WAI Forms Tutorial"],points:["<code>aria-label</code> is an acceptable fallback, but a visible <code>&lt;label&gt;</code> is strongly preferred."],related:["pa-a11y"]},
+ "floor-colortext":{k:"Floor · binding",h:"color-plus-text",summary:"Strength indication must include a text label in addition to bar color; color alone is prohibited as the sole means of conveying the strength state. A red / yellow / green bar fails WCAG 1.4.1 and is invisible to colorblind users.",where:["research.md · Constraints &amp; Floors","spec.md · Floors","WCAG 1.4.1 Use of Color"],points:["The band label satisfies this: sighted users get color, screen-reader users get live-region text, colorblind users get the label text.","The text label is the primary indicator; the bar is redundant reinforcement."]},
+ "floor-nobuild":{k:"Floor · binding",h:"no-build-no-dependencies",summary:"The implementation must use only vanilla HTML / CSS / JS with no external libraries, CDN scripts, bundlers, build steps, or web fonts. This architecturally excludes zxcvbn / zxcvbn-ts even via a no-build <code>&lt;script src&gt;</code> CDN tag, which would still introduce a runtime dependency.",where:["research.md · Constraints &amp; Floors","spec.md · Floors","feature constraint: static GitHub Pages deploy"],points:["This floor is what decides the composition-vs-entropy choice in favour of composition.","Inline system-font stack only — no web font (added to the floor at spec time)."],related:["pa-entropy","floor-relpaths"]},
+ "floor-relpaths":{k:"Floor · binding",h:"relative-asset-paths-only",summary:"All asset references in the deployed page must use sibling-relative paths (e.g. \"score.js\"), never root-relative paths (\"/score.js\"), because the GitHub Pages project site is served under a /&lt;repo-name&gt;/ subpath where root-relative paths 404.",where:["spec.md · Floors","GitHub Pages project-site subpath","existing pages.yml deploy"],points:["Made explicit at spec time; the deployed subpath is <code>/matali-fullpipeline-dogfood/</code>.","<code>index.html</code> imports <code>./score.js</code>, never <code>/score.js</code>; verified end-to-end by U7."],related:["pa-deploy","u7"]},
+ "floor-noguarantee":{k:"Floor · binding",h:"no-security-guarantee-claim",summary:"The meter must be framed as a composition guide and must not present its output as a security gate; the label vocabulary and surrounding copy must not use words like 'secure' or 'safe', and must disclose that it checks composition rules only — not entropy, breach exposure, or guessability.",where:["spec.md · Floors","NIST SP 800-63B","Dropbox/zxcvbn limitations"],points:["Made explicit at spec time as the disclosure obligation behind R0&rsquo;s honest-limitation note.","Enforced by acceptance #10 — a persistent disclaimer and a body-text check for 'secure'/'safe'."],related:["band-strong"]},
+ "band-weak":{k:"Scoring band",h:"Weak",summary:"<code>length &lt; 8</code> regardless of character variety, OR <code>length &ge; 8</code> with at most one character class. A short password is always Weak — no composition bonus can rescue it. This puts length first, consistent with NIST treating length as the primary strength signal.",where:["research.md · Constraints &amp; Floors","spec.md · Approach"],points:["<code>correcthorsebatterystaple</code> (25 chars, 1 class) → Weak — the disclosed passphrase limitation."],related:["band-fair","pa-nist"]},
+ "band-fair":{k:"Scoring band",h:"Fair",summary:"<code>length &ge; 8</code> AND 2–4 of the four character-class rules satisfied, but not Strong. Any 8–11 character input is at most Fair even with all four classes, because Strong requires the length-12 gate.",where:["research.md · Constraints &amp; Floors","spec.md · Approach"],points:["<code>Password1!</code> (9 chars, all 4 classes) → Fair — blocked by the length-12 gate (acceptance #5)."],related:["band-strong"]},
+ "band-strong":{k:"Scoring band",h:"Strong",summary:"<code>length &ge; 12</code> AND all four character-class rules satisfied. This is composition-complete and length-gated — not entropy-verified. The length-12 gate weights length per NIST and demotes <code>Password1!</code> to Fair; 'Strong' means composition-complete, not crack-resistant.",where:["research.md · Constraints &amp; Floors","spec.md · Approach"],points:["The label vocabulary must avoid 'secure' / 'safe' per the no-security-guarantee-claim floor.","The length-12 gate is the P1 refinement of R0&rsquo;s open band-threshold question."]},
+ "pa-core":{k:"Prior art · core",h:"Additive composition scorer",summary:"The dominant prior art across W3C WAI, CSS-Tricks, and multiple vanilla-JS meters converges here: assign one point per satisfied rule (length &ge; 8, lowercase, uppercase, digit, symbol) and map the total to an ordinal band. Zero-dependency, ~10 lines of native JS, no network call — exactly what the no-build constraint demands.",where:["research.md · Summary","research.md · Prior Art"],points:["Published meters vary in rule count (5–8) but the shape is consistent: few rules → weak, all rules → strong.","Length can be weighted more heavily to nudge toward the NIST-endorsed length priority — P1 added the length-12 Strong gate."],related:["pa-nist","band-strong"]},
+ "pa-color":{k:"Prior art",h:"Color + text indication",summary:"CSS-Tricks and PatternFly confirm color alone fails WCAG contrast and is invisible to colorblind users. The canonical fix — implied by the WAI example — pairs bar color with a text label. The band label directly satisfies this across all three user groups.",where:["research.md · Prior Art"],related:["floor-colortext"]},
+ "pa-perf":{k:"Prior art",h:"Per-keystroke performance",summary:"For a composition-rule scorer (five regex / includes checks), per-keystroke cost is sub-millisecond even on low-end mobile. CSS-Tricks and others confirm this is a non-issue for rule-based meters; heavy entropy libraries are the only performance concern, and only on very old devices. An optional 150–300 ms debounce serves screen-reader announcement frequency, not throughput.",where:["research.md · Prior Art","research.md · Open Questions"],related:["pa-core"]},
+ "pa-deploy":{k:"Prior art",h:"Static deploy constraints",summary:"A GitHub Pages project site is served under /repo-name/, so root-relative paths (/style.css) 404. The fix for a single-file deploy is sibling-relative paths only; no <code>&lt;base href&gt;</code> tag is needed and introduces its own fragility. The existing pages.yml workflow_dispatch publishes the branch root as-is, with no build artifact step.",where:["research.md · Prior Art","research.md · Existing Implementations","plan.md · Context"],points:["A single-file <code>index.html</code> plus a sibling <code>score.js</code> at repo root is the least error-prone structure for this target."]},
+ "file-score":{k:"P1 approach · layer",h:"score.js — pure scoring core",summary:"A pure ES module exporting <code>scorePassword(value) -> { band, rules, satisfiedCount }</code>. Five Boolean checks (<code>length &ge; 8</code>, <code>/[a-z]/</code>, <code>/[A-Z]/</code>, <code>/[0-9]/</code>, <code>/[^A-Za-z0-9]/</code>); no DOM, no globals, no network, no logging. Purity is the privacy floor expressed structurally — a function that cannot reach <code>fetch</code>/<code>console</code>/<code>storage</code> cannot leak the password.",where:["spec.md · Approach"],related:["file-index","file-test","u1"]},
+ "file-index":{k:"P1 approach · layer",h:"index.html — presentation + wiring",summary:"Loads <code>./score.js</code> via <code>&lt;script type=\"module\"&gt;</code> (sibling-relative, which the relative-asset-paths-only floor permits), with an inline <code>&lt;style&gt;</code> (system-font stack, no external fonts) and a thin render adapter + wiring listener. The render adapter is a declarative band→presentation lookup, so retuning a band is a one-line edit.",where:["spec.md · Approach"],related:["u3","u4","u5"]},
+ "file-test":{k:"P1 approach · layer",h:"score.test.js — node --test suite",summary:"<code>node --test</code> unit tests over <code>scorePassword</code> — the test-first red→green contract for P3 BUILD. The configured test runner; a single inline <code>&lt;script&gt;</code> would have blocked unit-testing the scorer, which is one reason the core lives in its own importable module.",where:["spec.md · Approach"],related:["u2"]},
+ "u2":{k:"Build unit · mechanical · dep U1",h:"U2 — node --test coverage gate",summary:"The executable acceptance gate for the scorer: a complete <code>node:test</code> suite (no production code) imported via the same sibling-relative <code>./score.js</code> specifier the browser uses, proving the module is dual-consumable. Required cases: a band boundary table, an explicit <code>scorePassword('Password1!').band==='fair'</code> assertion (acceptance #5 verbatim), the length-8 (7 vs 8) and length-12 (11 vs 12) boundary pairs, and a per-flag matrix.",where:["plan.md · Unit U2","score.test.js (modify)"],points:["DoD: <code>node --test</code> exits 0 covering every band, both thresholds, and all 5 flags — satisfies acceptance #11 and re-confirms #5."],related:["u7"]},
+ "u3":{k:"Build unit · design-judgment · root",h:"U3 — Accessible static skeleton",summary:"<code>index.html</code> with an inline system-font <code>&lt;style&gt;</code> (no @import, no web font) and the full accessible DOM contract, no JS yet: a visible <code>&lt;label for=\"pw\"&gt;</code> bound to <code>&lt;input type=\"password\" id=\"pw\"&gt;</code>; a band text label node; a strength bar with a fill child; a 5-item checklist keyed length/lower/upper/digit/symbol framed as 'satisfied rules'; a single <code>&lt;p id=\"sr-status\" role=\"status\" aria-live=\"polite\" aria-atomic=\"true\"&gt;</code> empty on load; and a persistent disclaimer whose copy uses neither 'secure' nor 'safe'.",where:["plan.md · Unit U3","index.html (create)"],points:["depends-on: [] (root).","Satisfies acceptance #7 and #10; provides the DOM contract for U4/U5 and the empty-state half of #1 and #8."],related:["u4","u5"]},
+ "u4":{k:"Build unit · integration · dep U1, U3",h:"U4 — Declarative render adapter",summary:"Inside <code>index.html</code>'s module script: a declarative <code>PRESENTATION</code> lookup mapping each band to <code>{labelText, barClass, widthPct, livePhrase}</code> (retuning a band is a one-line edit) plus a pure <code>render(result)</code> that sets the band text label, the bar fill class + width, and toggles each of the 5 checklist items from <code>result.rules[key]</code>. render MUST NOT read/write the input value, MUST NOT touch the live region (U5's concern), and MUST NOT log/transmit/store anything.",where:["plan.md · Unit U4","index.html (modify)"],points:["Conveys band by text AND color for every non-neutral band.","Satisfies acceptance #2, #3, #4, #6, and the color+text half of #7; provides the visual-reset half of #1."],related:["u5"]},
+ "u6":{k:"Build unit · mechanical · dep U1, U5",h:"U6 — Zero-exfiltration source guard",summary:"A <code>node --test</code> guard (added to <code>score.test.js</code>) reads the on-disk source text and asserts the absence of exfiltration/dependency tokens: <code>score.js</code> contains none of fetch / XMLHttpRequest / console. / localStorage / sessionStorage / dynamic <code>import(</code> / any http(s) URL; <code>index.html</code> has no external/CDN/web-font <code>&lt;script src&gt;</code>/<code>&lt;link&gt;</code>, no <code>@import url(</code>, and no root-relative asset path — its only script reference resolves to <code>./score.js</code>. A source-level invariant gate, not runtime behavior.",where:["plan.md · Unit U6","score.test.js (test)"],points:["Directly satisfies acceptance #9 at the source level; re-locks the no-build/no-deps and relative-asset-paths-only floors."],related:["u7"]},
+ "u7":{k:"Build unit · mechanical · dep U2–U6",h:"U7 — Static-deploy readiness",summary:"A verification checklist (no new files, no pages.yml edit — editing it is ask-first): confirm <code>index.html</code> and <code>score.js</code> sit at repo root so <code>actions/upload-pages-artifact path: '.'</code> publishes them; confirm <code>index.html</code> loads <code>./score.js</code> as a sibling-relative module that resolves under the <code>/matali-fullpipeline-dogfood/</code> subpath; confirm a local static server serves the page with the scorer loading and the meter functioning end-to-end. <code>pages.yml</code> must stay unmodified.",where:["plan.md · Unit U7",".github/workflows/pages.yml"],points:["End-to-end smoke: type 'MyDogR3x!2024' → label 'Strong' + 'Password strength: Strong'; clear → Neutral + empty live region.","Confirms the static-deploy requirement and the relative-asset-paths-only floor end-to-end; integrates all prior units."]}
+};
+const SURF={"phase-r0":"sheet","phase-p1":"sheet","phase-p2":"sheet","floor-network":"pane","floor-arialive":"pane","floor-polite":"pane","floor-label":"pane","floor-colortext":"pane","floor-nobuild":"pane","floor-relpaths":"pane","floor-noguarantee":"pane","band-weak":"pane","band-fair":"pane","band-strong":"pane","pa-core":"pane","pa-nist":"sheet","pa-a11y":"sheet","pa-color":"pane","pa-perf":"pane","pa-deploy":"pane","pa-entropy":"sheet","file-score":"pane","file-index":"pane","file-test":"pane","u1":"sheet","u2":"pane","u3":"pane","u4":"pane","u5":"sheet","u6":"pane","u7":"pane"};
+</script>
+</body></html>

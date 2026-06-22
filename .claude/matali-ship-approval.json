@@ -1,0 +1,11 @@
+{
+ "branch": "feat/password-strength-meter",
+ "baseSha": "cdd66f0df5359b63b34c209e8f3bcec51a64f279",
+ "approvedCommands": [
+  "git push -u origin feat/password-strength-meter",
+  "gh pr merge feat/password-strength-meter --squash --delete-branch",
+  "gh release create v0.1.0 --target main --title \"v0.1.0 \u2014 password-strength meter\" --notes-file /tmp/psm-changelog.md",
+  "git branch -D feat/password-strength-meter"
+ ],
+ "expiresAtEpoch": 1782161469
+}

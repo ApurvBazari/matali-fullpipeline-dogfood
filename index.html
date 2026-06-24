@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Password Strength Checker</title>
+  <style>
+    :root {
+      --ink: #1f2733;
+      --muted: #5a6573;
+      --line: #d8dee6;
+      --panel: #ffffff;
+      --bg: #f4f6f9;
+      --focus: #2b6cb0;
+      --weak: #c0392b;
+      --fair: #b45309;
+      --strong: #1a7a3c;
+      --track: #e6eaef;
+      --radius: 10px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 2.5rem 1rem;
+      background: var(--bg);
+      color: var(--ink);
+      font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 30rem;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 1.75rem;
+      box-shadow: 0 1px 2px rgba(31, 39, 51, 0.04), 0 8px 24px rgba(31, 39, 51, 0.06);
+    }
+
+    h1 {
+      margin: 0 0 0.25rem;
+      font-size: 1.35rem;
+      letter-spacing: -0.01em;
+    }
+
+    .lede {
+      margin: 0 0 1.5rem;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .field-label {
+      display: block;
+      font-weight: 600;
+      font-size: 0.9rem;
+      margin-bottom: 0.4rem;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 0.5rem;
+      align-items: stretch;
+    }
+
+    #password-input {
+      flex: 1 1 auto;
+      min-width: 0;
+      padding: 0.6rem 0.7rem;
+      font-size: 1rem;
+      color: var(--ink);
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+    }
+
+    #password-input:focus-visible,
+    #toggle-visibility:focus-visible {
+      outline: 3px solid var(--focus);
+      outline-offset: 2px;
+    }
+
+    #toggle-visibility {
+      flex: 0 0 auto;
+      padding: 0.5rem 0.85rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--ink);
+      background: #f1f4f8;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      cursor: pointer;
+    }
+
+    #toggle-visibility:hover { background: #e7ecf2; }
+
+    .meter {
+      margin-top: 1.25rem;
+    }
+
+    .bar {
+      display: flex;
+      gap: 0.4rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .bar-segment {
+      flex: 1 1 0;
+      height: 0.5rem;
+      border-radius: 999px;
+      background: var(--track);
+      transition: background-color 120ms ease;
+    }
+
+    /* Filled-segment colors are applied by ui.js via these tier classes on the bar. */
+    .bar.tier-weak .bar-segment.is-filled { background: var(--weak); }
+    .bar.tier-fair .bar-segment.is-filled { background: var(--fair); }
+    .bar.tier-strong .bar-segment.is-filled { background: var(--strong); }
+
+    .strength-label {
+      font-size: 0.9rem;
+      font-weight: 700;
+      min-height: 1.2em;
+    }
+
+    /* Tier text colors all meet WCAG-AA (≥4.5:1) on the white card: weak #c0392b (5.44:1),
+       fair #b45309 (5.02:1), strong #1a7a3c (5.39:1). Text carries the tier — never color alone. */
+    .strength-label.tier-weak { color: var(--weak); }
+    .strength-label.tier-fair { color: var(--fair); }
+    .strength-label.tier-strong { color: var(--strong); }
+
+    .rule-list {
+      list-style: none;
+      margin: 1.25rem 0 0;
+      padding: 0;
+      display: grid;
+      gap: 0.45rem;
+    }
+
+    .rule-list li {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      font-size: 0.92rem;
+      color: var(--muted);
+    }
+
+    .rule-list li.is-met {
+      color: var(--ink);
+    }
+
+    .rule-icon {
+      flex: 0 0 auto;
+      width: 1.15rem;
+      height: 1.15rem;
+      display: inline-grid;
+      place-items: center;
+      border-radius: 999px;
+      background: var(--track);
+      color: var(--muted);
+      font-size: 0.8rem;
+      line-height: 1;
+    }
+
+    /* Non-color cue: a glyph carries met/unmet state so it is never color-alone (F7). */
+    .rule-icon::before {
+      content: "\2717"; /* ✗ — not met */
+      font-size: 0.75rem;
+      line-height: 1;
+    }
+
+    .rule-list li.is-met .rule-icon {
+      background: var(--strong);
+      color: #fff;
+    }
+
+    .rule-list li.is-met .rule-icon::before {
+      content: "\2713"; /* ✓ — met */
+    }
+
+    .caveat {
+      margin: 1.5rem 0 0;
+      padding-top: 1rem;
+      border-top: 1px solid var(--line);
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    /* Visually-hidden text for screen readers (standard clip pattern). */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>Password Strength Checker</h1>
+    <p class="lede">Type a password to see how it scores against five guidance rules.</p>
+
+    <label class="field-label" for="password-input">Password</label>
+    <div class="input-row">
+      <input type="password" id="password-input" autocomplete="new-password"
+             autocapitalize="off" autocorrect="off" spellcheck="false">
+      <button type="button" id="toggle-visibility" aria-pressed="false" aria-controls="password-input">
+        Show password
+      </button>
+    </div>
+
+    <div class="meter">
+      <div class="bar" aria-hidden="true">
+        <span class="bar-segment"></span>
+        <span class="bar-segment"></span>
+        <span class="bar-segment"></span>
+      </div>
+      <p id="strength-label" class="strength-label"></p>
+    </div>
+
+    <ul id="rule-list" class="rule-list">
+      <li data-rule="length">
+        <span class="rule-icon" data-rule-icon="length" aria-hidden="true"></span>
+        <span>At least 8 characters</span>
+        <span class="sr-only" data-rule-state="length">Not met</span>
+      </li>
+      <li data-rule="lower">
+        <span class="rule-icon" data-rule-icon="lower" aria-hidden="true"></span>
+        <span>A lowercase letter</span>
+        <span class="sr-only" data-rule-state="lower">Not met</span>
+      </li>
+      <li data-rule="upper">
+        <span class="rule-icon" data-rule-icon="upper" aria-hidden="true"></span>
+        <span>An uppercase letter</span>
+        <span class="sr-only" data-rule-state="upper">Not met</span>
+      </li>
+      <li data-rule="digit">
+        <span class="rule-icon" data-rule-icon="digit" aria-hidden="true"></span>
+        <span>A digit</span>
+        <span class="sr-only" data-rule-state="digit">Not met</span>
+      </li>
+      <li data-rule="symbol">
+        <span class="rule-icon" data-rule-icon="symbol" aria-hidden="true"></span>
+        <span>A symbol</span>
+        <span class="sr-only" data-rule-state="symbol">Not met</span>
+      </li>
+    </ul>
+
+    <div id="strength-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
+
+    <p class="caveat">
+      These rules are guidance, not gatekeepers. Length matters most &mdash; longer is always
+      better; avoid common words and predictable patterns. Meeting all five rules at a sufficient
+      length (at least 12 characters) earns a <strong>Strong</strong> rating, but no checker can
+      promise a password is unguessable.
+    </p>
+  </main>
+
+  <script type="module" src="./ui.js"></script>
+</body>
+</html>

@@ -1,0 +1,49 @@
+# Verify Report — Password-Strength Meter (P4)
+
+**Final status:** pass · **Criteria:** 14/14 met · **Blocking:** none · **Degraded:** no · **Regressions:** none open · **Micro-cycles:** 2 (cap 3)
+
+Behavioral verification against the running page (local static server, headless Chromium probes + HTTP/CLI), skeptical-by-default. Initial run found real defects; two micro-cycles fixed them and re-probes confirmed green.
+
+## Verdicts (consolidated, final)
+
+| AC | Criterion | Instrument | Verdict |
+|----|-----------|-----------|---------|
+| AC1 | `index.html` at root, raw HTML contains "password" | http | met |
+| AC2 | password input has matching id + visible `<label for>` | browser | met |
+| AC3 | live update on `input` event (bar/label/checklist) | browser | met |
+| AC4 | `scorer.js` pure `evaluate()`, no DOM/network/storage/console | http+static | met |
+| AC5 | tier mapping incl. `''`→Weak, `Password1!`→Fair, `Password123!`→Strong | browser | met (after fix) |
+| AC6 | five predicates incl. symbol `/[^A-Za-z0-9\s]/u` | browser | met |
+| AC7 | AA-contrast tier colors + tier by text not color alone | browser | met (after fix) |
+| AC8 | checklist met/not-met by text/icon not color alone | browser | met (after fix) |
+| AC9 | ARIA live region: empty at parse, status/polite/atomic, tier-change-only, never assertive | browser | met (after fix) |
+| AC10 | accessible show/hide toggle (`aria-pressed`) + reset on clear | browser | met (after fix) |
+| AC11 | no network/storage/console logging of the value | browser | met |
+| AC12 | same-directory relative paths (`./ui.js`, `./scorer.js`) | http | met |
+| AC13 | `scorer.test.js` green under `node --test` (predicates + boundaries) | cli | met |
+| AC14 | honest framing: top tier "Strong", accurate caveat, never blocks input | browser | met (after fix) |
+
+## Defects found & fixed (micro-cycle history)
+
+**Micro-cycle 1 (5 fixes):**
+- **F9 / HIGH:** footer caveat claimed "Meeting every rule earns a Strong rating" — factually false (Strong needs length ≥ 12). Reworded accurately.
+- **F6 / MEDIUM:** the `role=status` live region had no `sr-only` class → its text rendered visibly, duplicating the label. Made screen-reader-only.
+- **F7 / floor:** rule-icon circles were empty → met/unmet conveyed by color alone for sighted users. Added visible ✓ / ✗ glyphs (`::before`).
+- **LOW:** show/hide toggle didn't reset when the field was cleared. Added reset-on-empty.
+- **AC5:** the spec internally contradicted itself (AC5 `''`→Weak vs plan-U4's blank-on-empty). The scorer correctly returns Weak for `''`; resolved toward the approved spec — the UI now reflects the scorer for all inputs (drop blank special-case).
+
+**Micro-cycle 2 (2 fixes):**
+- **F8 / floor (caught by the more rigorous re-probe; the first run mis-estimated it):** the Fair color `#b7710d` computes to only **3.90:1** on white at 14.4px bold — fails WCAG-AA 4.5:1. Changed to `#b45309` (**5.02:1**, passes). The floor (AA contrast) overrode the specific hex AC7 inherited from research. Weak `#c0392b` (5.44:1) and Strong `#1a7a3c` (5.39:1) already passed.
+- **Regression (MEDIUM):** the AC5 fix made initial load (blank) diverge from post-clear ("Weak"). Unified: the empty "Weak" state now renders on load too, seeding `lastTier` so the live region stays silent on load and announces only on subsequent tier changes.
+
+## Product decision recorded (for REVIEW)
+
+- **Empty-input state shows "Weak"** (on initial load and after clearing), per the approved spec AC5 (`''`→Weak) and for consistency. The alternative — a neutral/blank empty state — is also reasonable UX; flagging it here so it can be revisited at REVIEW/SHIP if preferred.
+
+## Accepted (won't-fix)
+
+- **No `maxlength` on the input** (LOW): intentionally omitted — a hard cap could truncate valid long passphrases; client-side regex on each keystroke is sub-millisecond. Out of scope.
+
+## Floors honored in the running app
+
+F1 (no deps/build/CDN), F2 (no network/storage/console of the value), F3 (relative paths), F4 (root `index.html`), F5 (labelled input), F6 (sr-only live region, polite, atomic, tier-change-only, never assertive, silent on load), F7 (✓/✗ glyphs + text, not color alone), F8 (all tier text ≥ 4.5:1 AA), F9 (accurate non-overclaiming copy), F10 (`node --test`), F11 (single `scorer.js` source of truth), F12 ("password" in HTML).

@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Password Strength Checker</title>
+  <style>
+    /* Page background is white (#fff); tier text colors below are chosen
+       to meet WCAG AA (>= 4.5:1) contrast against it. */
+    body {
+      background: #ffffff;
+      color: #1a1a1a;
+    }
+
+    /* Strength bar track. Fixed height + light grey background so the bar is a
+       visible horizontal strip even before/while the fill grows; overflow:hidden
+       clips the rounded fill cleanly. */
+    .bar {
+      height: 8px;
+      background: #e0e0e0;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    /* Strength bar fill. Width is JS-driven later (U4); transition animates it.
+       height:100% makes the colored fill span the track's full height. */
+    .bar-fill {
+      width: 0;
+      height: 100%;
+      transition: width .3s ease;
+    }
+
+    /* Tier color tokens. Applied to #tier-label by U4 (color is never the sole
+       signal: the label text and checklist glyphs carry meaning too). */
+    #tier-label.tier-weak   { color: #C0392B; } /* red   - 5.44:1 on #fff */
+    #tier-label.tier-fair   { color: #8a5a00; } /* amber - 5.93:1 on #fff */
+    #tier-label.tier-strong { color: #1E8449; } /* green - 4.72:1 on #fff */
+
+    /* Matching bar-fill backgrounds per tier (still paired with text/glyphs). */
+    #bar-fill.tier-weak   { background: #C0392B; }
+    #bar-fill.tier-fair   { background: #8a5a00; }
+    #bar-fill.tier-strong { background: #1E8449; }
+
+    /* F7: honour reduced-motion preference - the bar snaps instead of sliding. */
+    @media (prefers-reduced-motion: reduce) {
+      .bar-fill { transition: none; }
+    }
+
+    /* Visually-hidden status text for each rule (U4): conveys pass/fail via text,
+       not color alone (F4/AC2). Sighted users see the glyph; AT users hear this. */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Password Strength Checker</h1>
+
+    <div>
+      <label for="pw">Password</label>
+      <input id="pw" type="password" autocomplete="new-password">
+    </div>
+
+    <ul id="rules">
+      <li data-rule="length">
+        <span class="glyph" aria-hidden="true"></span>
+        <span class="sr-only status"></span>
+        at least 8 characters
+      </li>
+      <li data-rule="lower">
+        <span class="glyph" aria-hidden="true"></span>
+        <span class="sr-only status"></span>
+        lowercase letter
+      </li>
+      <li data-rule="upper">
+        <span class="glyph" aria-hidden="true"></span>
+        <span class="sr-only status"></span>
+        uppercase letter
+      </li>
+      <li data-rule="digit">
+        <span class="glyph" aria-hidden="true"></span>
+        <span class="sr-only status"></span>
+        number
+      </li>
+      <li data-rule="special">
+        <span class="glyph" aria-hidden="true"></span>
+        <span class="sr-only status"></span>
+        special character
+      </li>
+    </ul>
+
+    <div class="bar">
+      <div id="bar-fill" class="bar-fill"></div>
+    </div>
+
+    <span id="tier-label"></span>
+
+    <p id="live" class="sr-only" aria-live="polite" aria-atomic="true"> </p>
+
+    <p id="disclaimer">This tool is for educational guidance only and is not a security guarantee. Password strength indicators are approximations; they do not replace professional security advice.</p>
+  </main>
+
+  <script>
+    'use strict';
+
+    // Pure scoring core (U3). No DOM, no I/O, no network - synchronous regex only.
+    // U4 wires this to the #pw input; this unit only produces evaluate()/fillFor().
+
+    // tier -> strength-bar fill percentage. U4 reads this to size #bar-fill.
+    var FILL = { Weak: 33, Fair: 66, Strong: 100 };
+    function fillFor(tier) { return FILL[tier]; }
+
+    function evaluate(value) {
+      var rules = {
+        length: value.length >= 8,
+        lower: /[a-z]/.test(value),
+        upper: /[A-Z]/.test(value),
+        digit: /[0-9]/.test(value),
+        // Broad "not alphanumeric" class: by using /[^A-Za-z0-9]/ anything that
+        // is NOT a plain ASCII letter or digit counts as special - including
+        // spaces, punctuation, accented letters (e.g. "e") and emoji.
+        special: /[^A-Za-z0-9]/.test(value)
+      };
+
+      // passCount is derived from `rules` itself, so the rule set has a single
+      // source of truth: add or remove a rule in the object above and both the
+      // count and the all-rules-pass check below follow automatically.
+      var passCount = Object.values(rules).filter(Boolean).length;
+
+      // GATE-THEN-COUNT: the length rule is a hard gate. If length is unmet the
+      // result is always 'Weak', regardless of how many other rules pass. Only
+      // once length is met does passCount decide Strong (all 5) vs Fair (3-4)
+      // vs Weak (fewer).
+      var tier;
+      if (!rules.length) {
+        tier = 'Weak';
+      } else if (passCount === Object.keys(rules).length) {
+        tier = 'Strong';
+      } else if (passCount >= 3) {
+        tier = 'Fair';
+      } else {
+        tier = 'Weak';
+      }
+
+      return { rules: rules, passCount: passCount, tier: tier };
+    }
+
+    // U4 — DOM wiring. Calls evaluate()/fillFor() above; no network, no async.
+    var TIER_CLASSES = ['tier-weak', 'tier-fair', 'tier-strong'];
+
+    // U5 — aria-live tier-change guard. Tracks the last announced tier so the
+    // #live region is written ONLY when the tier changes (never on same-tier
+    // keystrokes). The region carries ONLY the bare tier string — never the
+    // password value or any derived/concatenated text (F2, F3, AC5).
+    var lastTier;
+
+    // render: synchronous one-pass DOM update — called per keystroke via 'input' listener.
+    function render(result) {
+      // 1. Update each rule's glyph (visual) and status span (text, not color alone).
+      var ruleItems = document.querySelectorAll('#rules li[data-rule]');
+      for (var i = 0; i < ruleItems.length; i++) {
+        var li   = ruleItems[i];
+        var key  = li.getAttribute('data-rule');
+        var pass = result.rules[key];
+        li.querySelector('.glyph').textContent  = pass ? '✓' : '✗'; // ✓ / ✗
+        li.querySelector('.status').textContent = pass ? 'met'    : 'not met';
+      }
+
+      // 2. Set bar-fill width to the tier fill%.
+      var barFill = document.getElementById('bar-fill');
+      barFill.style.width = fillFor(result.tier) + '%';
+
+      // 3. Apply exactly one tier class to both #bar-fill and #tier-label.
+      var tierLabel = document.getElementById('tier-label');
+      var tierClass = 'tier-' + result.tier.toLowerCase();
+      for (var j = 0; j < TIER_CLASSES.length; j++) {
+        barFill.classList.remove(TIER_CLASSES[j]);
+        tierLabel.classList.remove(TIER_CLASSES[j]);
+      }
+      barFill.classList.add(tierClass);
+      tierLabel.classList.add(tierClass);
+
+      // 4. Set tier label visible text.
+      tierLabel.textContent = result.tier;
+
+      // 5. U5 — guarded aria-live update. Write to #live ONLY when the tier
+      // changes; write ONLY the bare tier string so AT announces 'Weak', 'Fair',
+      // or 'Strong' — never the password value (F2/F3/AC5).
+      if (result.tier !== lastTier) {
+        document.getElementById('live').textContent = result.tier;
+        lastTier = result.tier;
+      }
+    }
+
+    // Single 'input' listener — synchronous, no debounce/setTimeout/Promise/rAF.
+    document.getElementById('pw').addEventListener('input', function () {
+      render(evaluate(this.value));
+    });
+  </script>
+</body>
+</html>

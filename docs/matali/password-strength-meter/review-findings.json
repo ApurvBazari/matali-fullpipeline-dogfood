@@ -1,0 +1,49 @@
+{
+ "findings": [
+  {
+   "id": "PSM-R1",
+   "title": "passCount re-enumerates the 5 rule keys already held in `rules` (DRY-knowledge; rule-count 5 also hardcoded in the ===5 / >=3 thresholds) \u2014 Object.values(rules).filter(Boolean).length is an equivalent single source",
+   "file": "index.html",
+   "line": 134,
+   "dimension": "simplify",
+   "severity": "low",
+   "verified": true,
+   "votes": {
+    "total": 1,
+    "couldNotRefute": 1,
+    "refuted": 0
+   }
+  },
+  {
+   "id": "PSM-R2",
+   "title": "No initial render(): checklist glyphs / tier-label / bar stay blank at page load (and after clearing) until the first keystroke",
+   "file": "index.html",
+   "line": 207,
+   "dimension": "requirements",
+   "severity": "low",
+   "verified": false,
+   "votes": {
+    "total": 1,
+    "couldNotRefute": 0,
+    "refuted": 1
+   }
+  },
+  {
+   "id": "PSM-R3",
+   "title": "Scoring core (length gate, Fair/Weak boundary, broad special-char regex, live-region tier-change guard) has no automated test",
+   "file": "index.html",
+   "line": 146,
+   "dimension": "test",
+   "severity": "low",
+   "verified": false,
+   "votes": {
+    "total": 1,
+    "couldNotRefute": 0,
+    "refuted": 1
+   }
+  }
+ ],
+ "recommendedEscalation": "minor",
+ "degraded": false,
+ "summary": "Clean review. 6 finders (correctness, spec-adherence, plan-adherence, test-gaps, risk-classify, principles) + 3 adversarial verifiers. Plan fully followed (6/6 units); risk class none; 8/9 ACs fully met, AC4 met post-typing. After refute-by-default verification, 1 of 3 substantive findings survives: a low-severity DRY-knowledge cleanup in passCount. The initial-render gap (spec-authorized resting state) and the test-coverage notes (accepted no-framework spec decision; paths behaviorally verified at VERIFY) were refuted. No bugs, security, risk, or floor violations."
+}

@@ -1,0 +1,16 @@
+{
+  "version": "1.0.0",
+  "profile": "production",
+  "testRunner": "unknown",
+  "deployTarget": "github-actions",
+  "maintain": {
+    "checks": [],
+    "disableBuiltins": [],
+    "loopback": { "autoFixMaxSeverity": "low" }
+  },
+  "ux": {
+    "watch":      { "offerAtStart": true, "cadence": "per-profile" },
+    "statusline": { "idleGlyph": true }
+  },
+  "createdAt": "2026-06-25T06:11:38Z"
+}
